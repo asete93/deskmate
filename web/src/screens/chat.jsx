@@ -24,6 +24,7 @@ function AnsweredBar({ text }) {
 function ChoiceCard({ m, answer }) {
   const c = m.content;
   const multi = !!c.multi;
+  const [detailOpen, setDetailOpen] = useState(false);
   // 다중 선택: 토글로 모아서 "선택 완료" 버튼으로 한 번에 제출 (단일 선택은 즉시 제출)
   const [sel, setSel] = useState([]);
   const pickedLabels = m.answered
@@ -37,6 +38,19 @@ function ChoiceCard({ m, answer }) {
   return (
     <div style={card({ padding: '20px' })}>
       <div style={{ fontSize: '14.5px', lineHeight: 1.55, marginBottom: '6px' }}>{c.text}</div>
+      {/* 본문 첨부(계획 전문 등) — 마크다운 팝업으로 열람 */}
+      {c.detail?.body && (
+        <div onClick={() => setDetailOpen(true)}
+          style={{ display: 'flex', alignItems: 'center', gap: '10px', background: C.goldLight, border: `1px solid ${C.goldBorder}`, borderRadius: '12px', padding: '11px 15px', cursor: 'pointer', margin: '8px 0 4px' }}>
+          <span style={{ fontSize: '16px' }}>📋</span>
+          <div style={{ flex: 1, minWidth: 0 }}>
+            <div style={{ fontSize: '13.5px', fontWeight: 700, color: C.heading, whiteSpace: 'nowrap', overflow: 'hidden', textOverflow: 'ellipsis' }}>{c.detail.title || t('상세 내용')}</div>
+            <div style={{ fontSize: '11.5px', color: C.t58 }}>{t('결정 전에 전문을 확인하세요')}</div>
+          </div>
+          <span style={{ fontSize: '12px', fontWeight: 700, color: C.goldText, flexShrink: 0 }}>{t('전문 보기 →')}</span>
+        </div>
+      )}
+      {detailOpen && <DetailModal title={c.detail?.title || t('상세 내용')} body={c.detail?.body} onClose={() => setDetailOpen(false)} />}
       {multi && !m.answered && <div style={{ fontSize: '12px', fontWeight: 600, color: C.goldText, marginBottom: '10px' }}>{t('복수 선택 가능 — 고른 뒤 "선택 완료"를 누르세요')}</div>}
       <div style={{ height: multi ? 0 : '8px' }} />
       {/* 답변 후에도 전체 선택지를 보여준다 (선택된 것 하이라이트) — 옵션이 사라지면 하나뿐이었던 것처럼 보임 */}
@@ -232,17 +246,31 @@ function DetailCard({ m }) {
   );
 }
 
-// 에이전트 발화 본문 — 과도하게 길면 접고 "전체 보기" 팝업 (attach_detail을 안 쓴 경우의 안전망)
+// 긴 본문의 추출 요약 — 첫 핵심 문장 + 섹션 목차. 원문은 팝업에서.
+function summarize(text) {
+  const lines = text.split('\n');
+  const heads = lines.filter(l => /^#{1,4}\s/.test(l.trim())).map(l => l.replace(/^#+\s*/, '').replace(/[*_`]/g, '').trim()).filter(Boolean);
+  // 첫 의미 문단 (헤딩·리스트·인용·표 제외)
+  const para = lines.map(l => l.trim()).find(l => l && !/^#{1,4}\s/.test(l) && !/^[-*>|`\d]/.test(l));
+  let first = (para || lines.map(l => l.trim()).find(Boolean) || '').replace(/[*_`#>]/g, '').trim();
+  const sent = first.match(/^[\s\S]{15,160}?(?:[.!?]|다\.|요\.|함\.)(?=\s|$)/);
+  first = sent ? sent[0].trim() : (first.length > 160 ? first.slice(0, 160).trimEnd() + '…' : first);
+  let out = first;
+  if (heads.length) out += `\n▸ ${heads.slice(0, 6).join(' · ')}${heads.length > 6 ? ` 외 ${heads.length - 6}` : ''}`;
+  return out;
+}
+
+// 에이전트 발화 본문 — 길면 요약(첫 문장+목차)만 보이고 원문은 팝업 (attach_detail을 안 쓴 경우의 안전망)
 export function AgentText({ text, light = false }) {
   const [open, setOpen] = useState(false);
-  const LIMIT = 700;
+  const LIMIT = 400;
   if (!text || text.length <= LIMIT) return <Linkify text={text} light={light} />;
   return (
     <>
-      <Linkify text={text.slice(0, LIMIT).trimEnd() + ' …'} light={light} />
+      <Linkify text={summarize(text)} light={light} />
       <div onClick={() => setOpen(true)}
         style={{ marginTop: '8px', fontSize: '12.5px', fontWeight: 700, color: light ? '#d4e9e2' : C.cta, cursor: 'pointer' }}>
-        전체 내용 보기 ({text.length.toLocaleString()}자)
+        {t('전체 내용 보기')} ({text.length.toLocaleString()}자)
       </div>
       {open && <DetailModal title={t('메시지 원문')} body={text} onClose={() => setOpen(false)} />}
     </>
@@ -1021,14 +1049,25 @@ export function ChatScreen({ openGoal, param }) {
         }} title={isEn() ? 'Clear conversation — erase messages & memory of this room' : '대화 초기화 — 이 방의 대화 내용과 기억을 비웁니다'} style={iconBtn(false)}>
           <svg width="15" height="15" viewBox="0 0 24 24" fill="none" stroke="currentColor" stroke-width="2" stroke-linecap="round" stroke-linejoin="round"><path d="M3 12a9 9 0 1 0 9-9 9.75 9.75 0 0 0-6.74 2.74L3 8" /><path d="M3 3v5h5" /></svg>
         </span>
-        <span onClick={() => setCfgOpen(!cfgOpen)} title="팀장 설정 (모드·모델·effort·이름)" style={iconBtn(cfgOpen)}>{I.settings(15)}</span>
+        <span data-cfg-toggle onClick={() => setCfgOpen(!cfgOpen)} title="팀장 설정 (모드·모델·effort·이름)" style={iconBtn(cfgOpen)}>{I.settings(15)}</span>
         <span onClick={openGoal} title="목표 수정" style={iconBtn(false)}>{I.target(15)}</span>
       </div>
     </div>
   );
 
+  // 패널 밖(토글 버튼 제외) 클릭하면 자동 닫힘
+  useEffect(() => {
+    if (!cfgOpen) return;
+    const onDown = (e) => {
+      if (e.target.closest?.('[data-cfg-panel]') || e.target.closest?.('[data-cfg-toggle]')) return;
+      setCfgOpen(false);
+    };
+    window.addEventListener('mousedown', onDown);
+    return () => window.removeEventListener('mousedown', onDown);
+  }, [cfgOpen]);
+
   const cfgPanel = cfgOpen && (
-        <div style={mobile ? card({ padding: '18px 20px', display: 'flex', gap: '22px 28px', flexWrap: 'wrap' }) : { padding: '18px 20px', display: 'flex', gap: '22px 28px', flexWrap: 'wrap', borderBottom: `1px solid ${C.line}` }}>
+        <div data-cfg-panel style={mobile ? card({ padding: '18px 20px', display: 'flex', gap: '22px 28px', flexWrap: 'wrap' }) : { padding: '18px 20px', display: 'flex', gap: '22px 28px', flexWrap: 'wrap', borderBottom: `1px solid ${C.line}` }}>
           <div style={{ width: '100%' }}>
             <div style={{ fontSize: '11px', fontWeight: 600, letterSpacing: '0.08em', color: C.t58, marginBottom: '8px' }}>NAME</div>
             <div style={{ display: 'flex', gap: '8px', maxWidth: '340px' }}>
@@ -1050,7 +1089,7 @@ export function ChatScreen({ openGoal, param }) {
               {isEn() ? 'THIS ROOM — MODEL · EFFORT' : '이 방의 MODEL · EFFORT'}
             </div>
             <div style={{ fontSize: '12px', color: C.t58, marginBottom: '10px' }}>
-              {isEn() ? 'Overrides for this room only. "Default" follows the Team Lead\'s base spec below.' : '이 방에서만 적용됩니다. "기본값"이면 아래 팀장 기본 스펙을 따릅니다.'}
+              {isEn() ? 'Overrides for this room only. "Default" follows the Team Lead\'s base spec (Org chart).' : '이 방에서만 적용됩니다. "기본값"이면 팀장 기본 스펙(조직도)을 따릅니다.'}
             </div>
             <div style={{ display: 'flex', gap: '18px', flexWrap: 'wrap' }}>
               <div>
@@ -1067,18 +1106,6 @@ export function ChatScreen({ openGoal, param }) {
                   {effortOptions(curThread?.model || main.model).map(ef => <SegPill key={ef} small active={curThread?.effort === ef} onClick={() => setRoomCfg({ effort: ef })}>{ef}</SegPill>)}
                 </div>
               </div>
-            </div>
-          </div>
-          <div>
-            <div style={{ fontSize: '11px', fontWeight: 600, letterSpacing: '0.08em', color: C.t58, marginBottom: '8px' }}>{isEn() ? 'BASE MODEL (all rooms)' : '기본 MODEL (전 방 공통)'}</div>
-            <div style={{ display: 'flex', gap: '6px', flexWrap: 'wrap' }}>
-              {modelOptions().map(mo => <SegPill key={mo.value} active={main.model === mo.value} onClick={() => setCfg({ model: mo.value })}>{mo.label}</SegPill>)}
-            </div>
-          </div>
-          <div>
-            <div style={{ fontSize: '11px', fontWeight: 600, letterSpacing: '0.08em', color: C.t58, marginBottom: '8px' }}>{isEn() ? 'BASE EFFORT (all rooms)' : '기본 EFFORT (전 방 공통)'}</div>
-            <div style={{ display: 'flex', gap: '6px', flexWrap: 'wrap' }}>
-              {effortOptions(main.model).map(ef => <SegPill key={ef} active={main.effort === ef} onClick={() => setCfg({ effort: ef })}>{ef}</SegPill>)}
             </div>
           </div>
         </div>

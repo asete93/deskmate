@@ -43,7 +43,7 @@ function orderedNav() {
   }
   if (!store.show_git_menu) items = items.filter(n => n.key !== 'git');
   if (!store.terminal_enabled) items = items.filter(n => n.key !== 'terminal');
-  if (store.files_enabled === false) items = items.filter(n => n.key !== 'files');
+  if (!store.files_enabled) items = items.filter(n => n.key !== 'files');
   return items;
 }
 
@@ -550,7 +550,7 @@ function App() {
           ? '16px 14px 82px'
           // 채팅류 화면은 하단 여백 없이 페이지 끝까지 — 대화 영역 최대화
           : (r.screen === 'chat' || r.screen === 'requests' || r.screen === 'terminal' || r.screen === 'files' || r.screen === 'review' || (r.screen === 'subs' && r.param) ? '24px 24px 24px' : '24px 24px 120px'),
-          maxWidth: (r.screen === 'terminal' || r.screen === 'files') ? 'none' : '1240px', width: '100%', margin: '0 auto' }}>
+          maxWidth: (r.screen === 'terminal' || r.screen === 'files' || r.screen === 'review') ? 'none' : '1240px', width: '100%', margin: '0 auto' }}>
           {store.ready ? screens[r.screen] : <div style={{ padding: '60px', textAlign: 'center', color: C.t58 }}>연결 중…</div>}
         </main>
         {isMobile && <MobileTabs screen={r.screen} badges={badges} />}

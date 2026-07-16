@@ -219,6 +219,20 @@ export function createManager({ db, bus, notify, workDir, uploadsDir, driverKind
     // 대표가 팀원에게 직접 보낸 메시지 표식 — 팀원은 이 표식이 있을 때만 대표에게 직접 답한다
     // (팀장 위임 브리프와 같은 세션을 공유하므로 출처를 명시해야 보고 대상이 갈리지 않음)
     if (!toMain) outText = `[대표님 직접 문의 — 보고·답변은 대표님에게]\n\n${outText}`;
+    // 이 에이전트가 이 채널의 카드(선택/폼 등)를 기다리는 중이면 — 세션이 카드에 블록돼
+    // 새 메시지가 처리되지 않고 행이 걸린다. 메시지를 카드의 자유 답변으로 주입해 즉시 진행시킨다.
+    const pend = db.listPendingInteractions()
+      .map(it => ({ it, m: db.getMessage(it.message_id) }))
+      .find(x => x.m && x.m.channel === channel && x.it.agent_id === agent.id);
+    if (pend) {
+      answerInteraction(pend.it.id, {
+        label: `(선택 대신 직접 답변) ${text.slice(0, 200)}`,
+        labels: [`(선택 대신 직접 답변) ${text.slice(0, 200)}`],
+        values: { '직접 답변': outText },
+        decision: 'request', note: outText, freeText: outText,
+      });
+      return { requestId, channel, target: toMain ? 'main' : `sub:${agent.id}` };
+    }
     // 접수 피드백은 상태 인디케이터(작업 중 도트)가 담당 — 별도 ACK 메시지는 게시하지 않음
     driver.onUserMessage(agent, channel, outText, requestId);
     return { requestId, channel, target: toMain ? 'main' : `sub:${agent.id}` };
@@ -366,9 +380,26 @@ export function createManager({ db, bus, notify, workDir, uploadsDir, driverKind
     return t;
   }
 
+  // 방의 pending 인터랙션 정리 — 세션이 죽거나 메시지가 지워지면 카드가 고아가 되어
+  // 답변 대기 배지·'작업 중' 상태가 영영 남는다. 취소로 종결하고 대기 에이전트를 idle로.
+  function cancelPendingInteractions(channel) {
+    for (const it of db.listPendingInteractions()) {
+      const m = db.getMessage(it.message_id);
+      if (m && m.channel !== channel) continue;
+      db.answerInteraction(it.id); // status='answered'로 종결
+      if (m) db.answerMessage(it.message_id, { cancelled: true, label: '취소됨 (대화 초기화)' });
+      bus.broadcast('interaction', { id: it.id, status: 'answered' });
+      const resolve = resolvers.get(it.id);
+      if (resolve) { resolvers.delete(it.id); resolve({ cancelled: true, decision: 'reject', label: '취소됨 (대화 초기화)' }); }
+      const a = db.getAgent(it.agent_id);
+      if (a && a.status === 'waiting') db.updateAgent(a.id, { status: 'idle', current_task: '' });
+    }
+  }
+
   // 방 대화 초기화 — 이력 삭제 + 세션 리셋 (방 자체는 유지, 기본 방의 "삭제" 대안)
   function clearThread(channel) {
     let label = channel;
+    cancelPendingInteractions(channel);
     if (channel.startsWith('sub:')) {
       // 팀원 1:1 초기화 — 세션 비대(토큰 낭비) 해소용
       const id = Number(channel.split(':')[1]);
@@ -376,16 +407,21 @@ export function createManager({ db, bus, notify, workDir, uploadsDir, driverKind
       if (!a) throw new Error('팀원 없음');
       driver.stop?.(id);
       db.updateAgent(id, { session_id: null, status: 'idle', current_task: '' });
-      bus.agents();
       label = a.name;
     } else {
       const th = db.getThread(channel);
       if (!th) throw new Error('방 없음');
       driver.stopThread?.(channel);
       db.updateThread(channel, { session_id: null });
+      // 이 방에서 일하던 팀장 세션을 강제 종료했으므로 상태도 리셋 — 'working' 잔상 방지
+      const main = db.listAgents().find(a => a.kind === 'main');
+      if (main && (db.getAgent(main.id).work_channel === channel || channel === 'main')) {
+        db.updateAgent(main.id, { status: 'idle', current_task: '' });
+      }
       bus.threads?.();
       label = th.title || channel;
     }
+    bus.agents();
     db.clearThreadMessages(channel);
     bus.broadcast('thread_cleared', { channel });
     bus.event('User', 'user', `대화 초기화 — ${label}`);
@@ -520,18 +556,52 @@ export function createManager({ db, bus, notify, workDir, uploadsDir, driverKind
       events: db.listEvents(),
       notif_channels: db.getSetting('notif_channels', []),
       nav_order: db.getSetting('nav_order', null),
-      show_git_menu: db.getSetting('show_git_menu', true),
+      show_git_menu: db.getSetting('show_git_menu', false),
       terminal_enabled: db.getSetting('terminal_enabled', false),
-      files_enabled: db.getSetting('files_enabled', true),
+      files_enabled: db.getSetting('files_enabled', false),
       pending_interactions: db.listPendingInteractions().length,
       claude_md: readClaudeMd(),
     };
+  }
+
+  // 전체 기억 초기화: 데이터(대화·티켓·결재·파일)는 유지, 에이전트 세션 기억만 전부 리셋.
+  // 팀장 모든 방 세션 + 팀원 전원 세션 종료, pending 카드도 전부 취소(고아 방지).
+  // Claude CLI 자동 메모리(~/.claude/projects/<워크스페이스 경로 슬러그>/memory) —
+  // 세션이 스스로 기록하는 영속 메모리라 DB 밖에 남는다. 기억 초기화 시 같이 지운다.
+  function wipeCliMemory() {
+    const slug = path.resolve(workDir).replace(/[/.]/g, '-');
+    const memDir = path.join(process.env.HOME || '/root', '.claude', 'projects', slug, 'memory');
+    try { fs.rmSync(memDir, { recursive: true, force: true }); } catch { /* noop */ }
+  }
+
+  function resetAllMemory() {
+    wipeCliMemory();
+    for (const it of db.listPendingInteractions()) {
+      const m = db.getMessage(it.message_id);
+      db.answerInteraction(it.id);
+      if (m) db.answerMessage(it.message_id, { cancelled: true, label: '취소됨 (기억 초기화)' });
+      bus.broadcast('interaction', { id: it.id, status: 'answered' });
+      const resolve = resolvers.get(it.id);
+      if (resolve) { resolvers.delete(it.id); resolve({ cancelled: true, decision: 'reject', label: '취소됨 (기억 초기화)' }); }
+    }
+    for (const th of db.listThreads()) {
+      driver.stopThread?.(th.channel);
+      db.updateThread(th.channel, { session_id: null });
+    }
+    for (const a of db.listAgents()) {
+      if (a.kind !== 'main') driver.stop?.(a.id);
+      db.updateAgent(a.id, { session_id: null, status: 'idle', current_task: '' });
+    }
+    bus.agents(); bus.threads?.();
+    bus.event('User', 'user', '전체 기억 초기화 — 모든 세션 리셋 (데이터 유지)');
+    bus.toast('팀장·팀원의 기억을 모두 초기화했습니다. 대화 기록·티켓은 유지됩니다.');
   }
 
   // 전체 데이터 초기화: 세션 종료 → DB 전체 삭제 → 워크스페이스·첨부 재생성 → 초기 시드
   function resetAll() {
     for (const a of db.listAgents(true)) { try { driver.stop?.(a.id); } catch { /* 세션 없음 */ } }
     db.wipeAll();
+    wipeCliMemory();
     fs.rmSync(workDir, { recursive: true, force: true });
     if (uploadsDir) fs.rmSync(uploadsDir, { recursive: true, force: true });
     seedWorkspace(workDir);
@@ -543,7 +613,7 @@ export function createManager({ db, bus, notify, workDir, uploadsDir, driverKind
 
   return {
     ctx, init, state, sendChat, answerInteraction, setGoal, setMode, setLang, setAgentConfig,
-    hireAgent, addExternalAgent, removeAgent, interruptAgent, resetAgentSession, createThread, renameThread, deleteThread, clearThread, setThreadConfig, decideApproval, getAgentPrompt, readClaudeMd, saveClaudeMd, resetAll,
+    hireAgent, addExternalAgent, removeAgent, interruptAgent, resetAgentSession, createThread, renameThread, deleteThread, clearThread, setThreadConfig, decideApproval, getAgentPrompt, readClaudeMd, saveClaudeMd, resetAll, resetAllMemory,
     listModels: () => driver.listModels(),
   };
 }

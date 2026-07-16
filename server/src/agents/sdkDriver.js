@@ -298,6 +298,29 @@ export function createSdkDriver(ctx) {
             }
             return { behavior: 'allow', updatedInput: { ...input, answers } };
           }
+          // Plan Mode 게이트: SDK의 계획 종료(ExitPlanMode)를 기본 allow로 흘려보내면
+          // 플랜 승인 없이 실행 단계로 넘어간다(실측: 팀장이 "승인 감사합니다"로 자체 진행).
+          // 반드시 대표 승인 카드를 거치게 한다.
+          if (toolName === 'ExitPlanMode') {
+            const planMd = typeof input?.plan === 'string' ? input.plan : '';
+            // 계획 전문은 detail(마크다운 팝업)로 — 카드 본문에 원문을 쏟으면 가독성이 무너진다
+            const firstLine = planMd.split('\n').map(l => l.replace(/^#+\s*/, '').replace(/[*_`]/g, '').trim()).find(Boolean) || '';
+            const answer = await ctx.createInteraction(agent, entry.replyChannel || channelOf(agent), 'choice', {
+              text: `[계획 승인 요청] ${agent.kind === 'main' ? '팀장' : `팀원 ${agent.name}`}이(가) 계획 실행 승인을 요청합니다.${firstLine ? `\n${firstLine}` : ''}`,
+              detail: { title: '실행 계획 전문', body: planMd },
+              options: [
+                { id: 'approve', label: '승인 — 실행 진행', desc: '계획대로 실행을 시작합니다.' },
+                { id: 'reject', label: '거절 — 계획 보완', desc: '실행하지 않고 계획을 다시 다듬습니다.' },
+              ],
+            });
+            if (answer.id === 'approve' || String(answer.label || '').startsWith('승인')) {
+              return { behavior: 'allow', updatedInput: input };
+            }
+            return { behavior: 'deny', message: answer.freeText
+              ? `대표님이 계획 승인 대신 의견을 보냈다: "${answer.freeText}"\n의견을 반영해 계획을 보완하고 다시 승인을 요청하라. 승인 전에는 실행하지 마라.`
+              : '대표님이 계획을 승인하지 않았습니다. 무엇을 바꿀지 질문하거나 계획을 보완해 다시 승인을 요청하라. 승인 전에는 실행하지 마라.' };
+          }
+
           const mode = db.getSetting('mode', 'plan');
           const isClaudeMd = typeof input?.file_path === 'string' && input.file_path.endsWith('CLAUDE.md');
           const isEditTool = ['Edit', 'Write', 'MultiEdit', 'NotebookEdit'].includes(toolName);
@@ -369,6 +392,7 @@ export function createSdkDriver(ctx) {
           }
         }
       } catch (e) {
+        if (entry.stopped) return; // 사용자가 중단/초기화한 세션 — 재시도·이벤트 없이 조용히 종료
         console.error(`[sdk:${agent.name}] 세션 오류:`, e.message);
         sessions.delete(key);
         const actor = agent.kind === 'main' ? 'Main' : agent.name;
@@ -416,6 +440,17 @@ export function createSdkDriver(ctx) {
     })();
 
     return entry;
+  }
+
+  // 세션 강제 종료. entry.end()(입력 큐 닫기)만으로는 진행 중인 턴이 계속 돌며
+  // 방에 발화를 이어가는 좀비가 된다(실측: 초기화 후 이전 세션이 계속 조사·보고).
+  // interrupt로 턴 자체를 중단하고 stopped 플래그로 catch의 자동 재시도도 차단한다.
+  function killEntry(entry) {
+    if (!entry) return;
+    entry.stopped = true;
+    try { Promise.resolve(entry.q?.interrupt?.()).catch(() => { /* 턴 없음 */ }); } catch { /* noop */ }
+    try { entry.end(); } catch { /* 이미 닫힘 */ }
+    sessions.delete(entry.key);
   }
 
   function diffLines(input) {
@@ -643,18 +678,16 @@ export function createSdkDriver(ctx) {
 
     // 특정 방 세션만 종료 (새 대화 시작)
     stopThread(channel) {
-      const entry = sessions.get(`t:${channel}`);
-      if (entry) { try { entry.end(); } catch { } sessions.delete(`t:${channel}`); }
+      killEntry(sessions.get(`t:${channel}`));
     },
 
     stop(agentId) {
       const agent = db.getAgent(agentId);
       if (agent?.kind === 'main') {
-        for (const entry of mainEntries()) { try { entry.end(); } catch { } sessions.delete(entry.key); }
+        for (const entry of mainEntries()) killEntry(entry);
         return;
       }
-      const entry = sessions.get(`a:${agentId}`);
-      if (entry) { try { entry.end(); } catch { } sessions.delete(`a:${agentId}`); }
+      killEntry(sessions.get(`a:${agentId}`));
     },
   };
 }

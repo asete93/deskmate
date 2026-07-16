@@ -32,9 +32,9 @@ export function createBus(db) {
         progress: db.getSetting('progress', 0),
         notif_channels: db.getSetting('notif_channels', []),
         nav_order: db.getSetting('nav_order', null),
-        show_git_menu: db.getSetting('show_git_menu', true),
+        show_git_menu: db.getSetting('show_git_menu', false),
         terminal_enabled: db.getSetting('terminal_enabled', false),
-        files_enabled: db.getSetting('files_enabled', true),
+        files_enabled: db.getSetting('files_enabled', false),
       });
     },
     toast(text) { broadcast('toast', { text }); },

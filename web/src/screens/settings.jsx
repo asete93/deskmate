@@ -4,7 +4,7 @@ import { store, showToast } from '../store.js';
 import { api, getServices, saveServices, currentBase, setCurrentBase } from '../api.js';
 import { useEffect } from 'preact/hooks';
 import { C, card, label12, Btn, Chip, Input, dotStyle, Modal, SegPill, fmtDateTime } from '../ui.jsx';
-import { t } from '../i18n.js';
+import { t, isEn } from '../i18n.js';
 
 // 예약 작업 — 지정 시각/주기에 팀장(또는 특정 팀원)에게 요청을 자동 전송
 const WEEKDAYS = ['일', '월', '화', '수', '목', '금', '토'];
@@ -330,17 +330,32 @@ export function SettingsScreen() {
             <div style={{ fontSize: '14px', fontWeight: 600 }}>{t('파일')}</div>
             <div style={{ fontSize: '12.5px', color: C.t58, marginTop: '2px' }}>{t('워크스페이스 파일 탐색기·에디터. 끄면 메뉴·파일 API가 모두 차단됩니다.')}</div>
           </div>
-          <div onClick={() => api.post('/settings/files', { enabled: store.files_enabled === false }).catch(e => showToast(e.message))}
-            style={{ width: '40px', height: '22px', borderRadius: '50px', position: 'relative', cursor: 'pointer', flexShrink: 0, transition: 'all 0.2s ease', background: store.files_enabled !== false ? C.cta : C.border }}>
-            <span style={{ position: 'absolute', top: '2px', width: '18px', height: '18px', borderRadius: '50%', background: '#fff', boxShadow: '0 1px 2px rgba(0,0,0,0.24)', transition: 'all 0.2s ease', left: store.files_enabled !== false ? '20px' : '2px' }} />
+          <div onClick={() => api.post('/settings/files', { enabled: !store.files_enabled }).catch(e => showToast(e.message))}
+            style={{ width: '40px', height: '22px', borderRadius: '50px', position: 'relative', cursor: 'pointer', flexShrink: 0, transition: 'all 0.2s ease', background: store.files_enabled ? C.cta : C.border }}>
+            <span style={{ position: 'absolute', top: '2px', width: '18px', height: '18px', borderRadius: '50%', background: '#fff', boxShadow: '0 1px 2px rgba(0,0,0,0.24)', transition: 'all 0.2s ease', left: store.files_enabled ? '20px' : '2px' }} />
           </div>
         </div>
       </section>
 
-      {/* 위험 구역 — 전체 데이터 초기화 */}
+      {/* 위험 구역 — 기억/데이터 초기화 */}
       <section style={card({ padding: '24px', border: '1px solid rgba(200,32,20,0.35)' })}>
         <div style={{ ...label12, color: C.danger }}>위험 구역</div>
         <div style={{ display: 'flex', alignItems: 'center', gap: '12px', marginTop: '12px', flexWrap: 'wrap' }}>
+          <div style={{ flex: 1, minWidth: '220px' }}>
+            <div style={{ fontSize: '14px', fontWeight: 600 }}>{t('전체 기억 초기화')}</div>
+            <div style={{ fontSize: '12.5px', color: C.t58, marginTop: '2px' }}>
+              {t('팀장(모든 방)·팀원 전원의 세션 기억만 리셋합니다. 대화 기록·티켓·결재·워크스페이스 파일은 유지되고, 대기 중인 질문 카드는 취소됩니다.')}
+            </div>
+          </div>
+          <Btn variant="danger" onClick={() => {
+            if (confirm(isEn()
+              ? 'Reset ALL agent memory?\nChat history/tickets/files are kept; every Team Lead room session and all member sessions start fresh.'
+              : '팀장·팀원의 기억을 모두 초기화할까요?\n대화 기록·티켓·파일은 유지되지만, 모든 세션이 백지에서 다시 시작합니다.')) {
+              api.post('/reset-memory').catch(e => showToast(e.message));
+            }
+          }}>{t('기억 초기화')}</Btn>
+        </div>
+        <div style={{ display: 'flex', alignItems: 'center', gap: '12px', marginTop: '16px', flexWrap: 'wrap', borderTop: `1px solid ${C.line}`, paddingTop: '16px' }}>
           <div style={{ flex: 1, minWidth: '220px' }}>
             <div style={{ fontSize: '14px', fontWeight: 600 }}>전체 데이터 초기화</div>
             <div style={{ fontSize: '12.5px', color: C.t58, marginTop: '2px' }}>

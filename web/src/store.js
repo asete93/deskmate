@@ -14,9 +14,9 @@ export const store = {
   auth: { enabled: false, has_password: false },
   models: [],            // 실제 사용 가능 모델 [{value,label,desc}] — GET /api/models
   nav_order: null,       // 사이드패널 메뉴 순서 (서버 저장 — 모든 접속 환경 공통)
-  show_git_menu: true,   // Git 메뉴 노출 여부 (기능은 유지)
+  show_git_menu: false,  // Git 메뉴 노출 여부 (기본 off — 설정에서 켬)
   terminal_enabled: false, // 웹 터미널 기능 on/off
-  files_enabled: true,     // 파일 탐색기 on/off
+  files_enabled: false,    // 파일 탐색기 on/off (기본 off)
   agents: [], tickets: [], approvals: [], requests: [], events: [],
   threads: [],           // 팀장 채팅방 목록 (방별 독립 세션)
   notif_channels: [],
@@ -48,9 +48,9 @@ export async function loadSnapshot() {
     requests: s.requests, threads: s.threads || [], events: s.events, auth: s.auth || { enabled: false, has_password: false },
     notif_channels: s.notif_channels,
     nav_order: s.nav_order || null,
-    show_git_menu: s.show_git_menu !== false,
+    show_git_menu: s.show_git_menu === true,
     terminal_enabled: !!s.terminal_enabled,
-    files_enabled: s.files_enabled !== false,
+    files_enabled: s.files_enabled === true,
     pendingCount: s.pending_interactions,
     claude_md: s.claude_md,
   });
@@ -139,7 +139,7 @@ export function connectWs() {
       store.messages[payload.channel] = [];
       if (store.allChat) store.allChat = store.allChat.filter(m => m.channel !== payload.channel);
     } else if (type === 'settings') {
-      Object.assign(store, { goal: payload.goal, goal_history: payload.goal_history || store.goal_history, mode: payload.mode, lang: payload.lang || store.lang, progress: payload.progress, notif_channels: payload.notif_channels, nav_order: payload.nav_order ?? store.nav_order, show_git_menu: payload.show_git_menu !== false, terminal_enabled: !!payload.terminal_enabled, files_enabled: payload.files_enabled !== false });
+      Object.assign(store, { goal: payload.goal, goal_history: payload.goal_history || store.goal_history, mode: payload.mode, lang: payload.lang || store.lang, progress: payload.progress, notif_channels: payload.notif_channels, nav_order: payload.nav_order ?? store.nav_order, show_git_menu: payload.show_git_menu === true, terminal_enabled: !!payload.terminal_enabled, files_enabled: payload.files_enabled === true });
     } else if (type === 'claude_md') {
       store.claude_md = payload.content;
     } else if (type === 'rate_limit') {

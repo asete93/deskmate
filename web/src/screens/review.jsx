@@ -34,11 +34,34 @@ export function ReviewScreen({ param }) {
   const [pins, setPins] = useState([]);    // {selector,label,xr,yr,comment}
   const [edits, setEdits] = useState([]);  // {selector,label,before,after}
   const [draft, setDraft] = useState(null); // 코멘트 입력 중인 핀 index
+  const [focused, setFocused] = useState(null); // 하이라이트 중인 핀 index
   const [note, setNote] = useState('');
   const [busy, setBusy] = useState(false);
   const iframeRef = useRef(null);
+  const frameWrapRef = useRef(null);
   const stateRef = useRef({});
-  stateRef.current = { mode, pins };
+  stateRef.current = { mode, pins, focused };
+
+  // 문서가 컨테이너보다 넓으면 축소해 화면 폭에 맞춘다 (핀 좌표는 문서 좌표라 함께 스케일됨)
+  const applyFit = () => {
+    const wrap = frameWrapRef.current, ifr = iframeRef.current, doc = ifr?.contentDocument;
+    if (!wrap || !ifr || !doc?.documentElement) return;
+    ifr.style.width = '100%'; ifr.style.height = '100%'; ifr.style.transform = '';
+    const cw = wrap.clientWidth;
+    const docW = Math.max(doc.documentElement.scrollWidth, doc.body?.scrollWidth || 0);
+    if (docW > cw + 4) {
+      const sc = cw / docW;
+      ifr.style.width = `${docW}px`;
+      ifr.style.height = `${wrap.clientHeight / sc}px`;
+      ifr.style.transform = `scale(${sc})`;
+      ifr.style.transformOrigin = '0 0';
+    }
+  };
+  useEffect(() => {
+    const onResize = () => applyFit();
+    window.addEventListener('resize', onResize);
+    return () => window.removeEventListener('resize', onResize);
+  }, []);
 
   useEffect(() => {
     api.get(`/messages/${param}`).then(setM).catch(e => showToast(e.message));
@@ -49,12 +72,13 @@ export function ReviewScreen({ param }) {
   const src = interactive ? currentBase() + art.url : art.url;
   const done = !!m?.answered;
 
-  // 핀 마커를 문서 안에 주입 (스크롤 자동 동기)
-  const renderMarkers = (doc, list) => {
-    doc.querySelectorAll('[data-cc-pin]').forEach(e => e.remove());
+  // 핀 마커를 문서 안에 주입 (스크롤 자동 동기). focusIdx 핀은 대상 요소 하이라이트.
+  const renderMarkers = (doc, list, focusIdx = null) => {
+    doc.querySelectorAll('[data-cc-pin],[data-cc-hl]').forEach(e => e.remove());
     list.forEach((p, i) => {
       let target = null;
       try { target = p.selector ? doc.querySelector(p.selector) : null; } catch { /* bad selector */ }
+      const isFocus = focusIdx === i;
       const mark = doc.createElement('div');
       mark.setAttribute('data-cc-pin', String(i));
       mark.textContent = String(i + 1);
@@ -63,35 +87,71 @@ export function ReviewScreen({ param }) {
         const r = target.getBoundingClientRect();
         top = r.top + doc.defaultView.scrollY - 10;
         left = r.left + doc.defaultView.scrollX + r.width - 10;
+        if (isFocus) {
+          // 대상 요소 하이라이트 박스
+          const hl = doc.createElement('div');
+          hl.setAttribute('data-cc-hl', '1');
+          hl.style.cssText = `position:absolute;top:${r.top + doc.defaultView.scrollY - 3}px;left:${r.left + doc.defaultView.scrollX - 3}px;width:${r.width + 6}px;height:${r.height + 6}px;z-index:99998;border:2px solid #b8860b;border-radius:6px;background:rgba(184,134,11,0.12);box-shadow:0 0 0 4px rgba(184,134,11,0.18);pointer-events:none;`;
+          doc.body.appendChild(hl);
+        }
       } else {
         top = p.yr * doc.documentElement.scrollHeight;
         left = p.xr * doc.documentElement.scrollWidth;
       }
-      mark.style.cssText = `position:absolute;top:${top}px;left:${left}px;z-index:99999;width:22px;height:22px;border-radius:50% 50% 50% 4px;background:#b8860b;color:#fff;font:700 12px/22px sans-serif;text-align:center;box-shadow:0 2px 6px rgba(0,0,0,.35);pointer-events:none;`;
+      const scale = isFocus ? 'transform:scale(1.35);transform-origin:center;' : '';
+      mark.style.cssText = `position:absolute;top:${top}px;left:${left}px;z-index:99999;width:22px;height:22px;border-radius:50% 50% 50% 4px;background:${isFocus ? '#00754a' : '#b8860b'};color:#fff;font:700 12px/22px sans-serif;text-align:center;box-shadow:0 2px 6px rgba(0,0,0,.35);pointer-events:none;${scale}`;
       doc.body.appendChild(mark);
     });
+  };
+
+  // 우측 목록에서 핀 선택 → 문서에서 해당 요소로 스크롤 + 하이라이트
+  const focusPin = (i, list) => {
+    const doc = iframeRef.current?.contentDocument;
+    setFocused(i);
+    if (!doc) return;
+    const arr = list || (done ? (m.answer?.pins || []) : pins);
+    renderMarkers(doc, arr, i);
+    const p = arr[i];
+    let target = null;
+    try { target = p?.selector ? doc.querySelector(p.selector) : null; } catch { /* noop */ }
+    if (target) target.scrollIntoView({ behavior: 'smooth', block: 'center' });
+    else if (p) doc.defaultView.scrollTo({ top: p.yr * doc.documentElement.scrollHeight - 200, behavior: 'smooth' });
   };
 
   const onFrameLoad = () => {
     const doc = iframeRef.current?.contentDocument;
     if (!doc || !interactive) return;
+    applyFit();
+    setTimeout(applyFit, 300); // 폰트·이미지 로드 후 재계산
     // 답변 완료 건은 저장된 핀만 표시 (읽기 전용)
     if (done) { renderMarkers(doc, m.answer?.pins || []); return; }
+
+    // 핀은 우클릭으로만 — 좌클릭은 문서 원래 동작(링크·탭 등) 그대로 통과
+    doc.addEventListener('contextmenu', (e) => {
+      const cur = stateRef.current;
+      if (cur.mode !== 'pin') return;
+      const el = e.target;
+      if (el.getAttribute?.('data-cc-pin') != null) return;
+      e.preventDefault(); e.stopPropagation();
+      const p = {
+        selector: cssPath(el), label: labelOf(el),
+        xr: (e.pageX || 0) / Math.max(1, doc.documentElement.scrollWidth),
+        yr: (e.pageY || 0) / Math.max(1, doc.documentElement.scrollHeight),
+        comment: '',
+      };
+      setPins(prev => {
+        const next = [...prev, p];
+        const idx = next.length - 1;
+        setFocused(idx); renderMarkers(doc, next, idx); setDraft(idx);
+        return next;
+      });
+    }, true);
 
     doc.addEventListener('click', (e) => {
       const cur = stateRef.current;
       const el = e.target;
       if (el.getAttribute?.('data-cc-pin') != null) return;
-      if (cur.mode === 'pin') {
-        e.preventDefault(); e.stopPropagation();
-        const p = {
-          selector: cssPath(el), label: labelOf(el),
-          xr: (e.pageX || 0) / Math.max(1, doc.documentElement.scrollWidth),
-          yr: (e.pageY || 0) / Math.max(1, doc.documentElement.scrollHeight),
-          comment: '',
-        };
-        setPins(prev => { const next = [...prev, p]; renderMarkers(doc, next); setDraft(next.length - 1); return next; });
-      } else if (cur.mode === 'edit') {
+      if (cur.mode === 'edit') {
         // 텍스트 요소를 그 자리에서 편집 — blur 시 변경분 기록
         if (!el.closest || el.tagName === 'IMG') return;
         e.preventDefault(); e.stopPropagation();
@@ -118,10 +178,11 @@ export function ReviewScreen({ param }) {
     setPins(prev => {
       const next = prev.filter((_, j) => j !== i);
       const doc = iframeRef.current?.contentDocument;
-      if (doc) renderMarkers(doc, next);
+      if (doc) renderMarkers(doc, next, null);
       return next;
     });
     if (draft === i) setDraft(null);
+    setFocused(null);
   };
 
   const submit = async (approve) => {
@@ -172,7 +233,7 @@ export function ReviewScreen({ param }) {
       )}
       <div style={{ display: 'flex', gap: '14px', flex: 1, minHeight: 0 }}>
         {/* 산출물 */}
-        <div style={{ flex: 1, minWidth: 0, ...card({ padding: 0, overflow: 'hidden' }) }}>
+        <div ref={frameWrapRef} style={{ flex: 1, minWidth: 0, ...card({ padding: 0, overflow: 'hidden' }) }}>
           <iframe ref={iframeRef} src={src} onLoad={onFrameLoad}
             style={{ width: '100%', height: '100%', border: 'none', display: 'block' }} />
         </div>
@@ -181,11 +242,11 @@ export function ReviewScreen({ param }) {
           <div style={card({ padding: '14px 16px' })}>
             <div style={{ fontSize: '11px', fontWeight: 700, letterSpacing: '0.08em', color: C.t58, marginBottom: '8px' }}>{isEn() ? 'PIN COMMENTS' : '핀 코멘트'} ({(done ? m.answer?.pins : pins)?.length || 0})</div>
             {(done ? (m.answer?.pins || []) : pins).map((p, i) => (
-              <div key={i} style={{ borderTop: i ? `1px solid ${C.line}` : 'none', padding: '8px 0' }}>
-                <div style={{ display: 'flex', alignItems: 'center', gap: '6px' }}>
-                  <span style={{ width: '18px', height: '18px', borderRadius: '50%', background: C.gold, color: C.dark, fontSize: '11px', fontWeight: 700, display: 'inline-flex', alignItems: 'center', justifyContent: 'center', flexShrink: 0 }}>{i + 1}</span>
+              <div key={i} style={{ borderTop: i ? `1px solid ${C.line}` : 'none', padding: '8px 0', margin: '0 -8px', paddingLeft: '8px', paddingRight: '8px', borderRadius: '8px', background: focused === i ? 'rgba(184,134,11,0.10)' : 'transparent' }}>
+                <div onClick={() => focusPin(i)} style={{ display: 'flex', alignItems: 'center', gap: '6px', cursor: 'pointer' }} title={isEn() ? 'Focus this pin' : '이 핀 위치 보기'}>
+                  <span style={{ width: '18px', height: '18px', borderRadius: '50%', background: focused === i ? C.cta : C.gold, color: focused === i ? '#fff' : C.dark, fontSize: '11px', fontWeight: 700, display: 'inline-flex', alignItems: 'center', justifyContent: 'center', flexShrink: 0 }}>{i + 1}</span>
                   <span style={{ fontSize: '12px', fontWeight: 600, color: C.heading, flex: 1, whiteSpace: 'nowrap', overflow: 'hidden', textOverflow: 'ellipsis' }}>{p.label || p.selector}</span>
-                  {!done && <span onClick={() => removePin(i)} style={{ cursor: 'pointer', color: C.t58, fontSize: '12px' }}>✕</span>}
+                  {!done && <span onClick={(e) => { e.stopPropagation(); removePin(i); }} style={{ cursor: 'pointer', color: C.t58, fontSize: '12px' }}>✕</span>}
                 </div>
                 {!done && draft === i ? (
                   <textarea autoFocus value={p.comment} rows={2}
@@ -200,7 +261,7 @@ export function ReviewScreen({ param }) {
                 )}
               </div>
             ))}
-            {!done && pins.length === 0 && <div style={{ fontSize: '12px', color: C.t58 }}>{isEn() ? 'Click any element on the left to drop a pin.' : '왼쪽 화면에서 요소를 클릭하면 핀이 생깁니다.'}</div>}
+            {!done && pins.length === 0 && <div style={{ fontSize: '12px', color: C.t58 }}>{isEn() ? 'Right-click any element on the left to drop a pin. Left-click works normally (links, tabs).' : '왼쪽 화면에서 요소를 우클릭하면 핀이 생깁니다. 좌클릭은 원래대로 동작합니다(링크·탭).'}</div>}
           </div>
           <div style={card({ padding: '14px 16px' })}>
             <div style={{ fontSize: '11px', fontWeight: 700, letterSpacing: '0.08em', color: C.t58, marginBottom: '8px' }}>{isEn() ? 'TEXT EDITS' : '텍스트 직접 수정'} ({(done ? m.answer?.edits : edits)?.length || 0})</div>

@@ -117,7 +117,7 @@ export function createApi({ db, bus, manager, gitApi, uploadsDir, auth, termHub,
   }));
 
   // ---- 워크스페이스 파일 (탐색기·에디터) ----
-  const fmw = (req, res, next) => { if (!db.getSetting('files_enabled', true)) return res.status(403).json({ error: '파일 기능이 꺼져 있습니다' }); next(); };
+  const fmw = (req, res, next) => { if (!db.getSetting('files_enabled', false)) return res.status(403).json({ error: '파일 기능이 꺼져 있습니다' }); next(); };
   r.post('/settings/files', guard((req, res) => {
     db.setSetting('files_enabled', !!req.body?.enabled);
     bus.settings();
@@ -178,6 +178,7 @@ export function createApi({ db, bus, manager, gitApi, uploadsDir, auth, termHub,
   }));
 
   // 전체 데이터 초기화 (파괴적) — UI 확인 모달 통과 후에만 호출
+  r.post('/reset-memory', guard((req, res) => { manager.resetAllMemory(); ok(res); }));
   r.post('/reset', guard((req, res) => {
     if (req.body.confirm !== 'RESET') throw new Error('confirm 값이 올바르지 않습니다');
     manager.resetAll();
