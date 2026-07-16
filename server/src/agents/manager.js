@@ -522,6 +522,7 @@ export function createManager({ db, bus, notify, workDir, uploadsDir, driverKind
       nav_order: db.getSetting('nav_order', null),
       show_git_menu: db.getSetting('show_git_menu', true),
       terminal_enabled: db.getSetting('terminal_enabled', false),
+      files_enabled: db.getSetting('files_enabled', true),
       pending_interactions: db.listPendingInteractions().length,
       claude_md: readClaudeMd(),
     };

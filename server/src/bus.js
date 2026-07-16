@@ -34,6 +34,7 @@ export function createBus(db) {
         nav_order: db.getSetting('nav_order', null),
         show_git_menu: db.getSetting('show_git_menu', true),
         terminal_enabled: db.getSetting('terminal_enabled', false),
+        files_enabled: db.getSetting('files_enabled', true),
       });
     },
     toast(text) { broadcast('toast', { text }); },

@@ -43,6 +43,7 @@ function orderedNav() {
   }
   if (!store.show_git_menu) items = items.filter(n => n.key !== 'git');
   if (!store.terminal_enabled) items = items.filter(n => n.key !== 'terminal');
+  if (store.files_enabled === false) items = items.filter(n => n.key !== 'files');
   return items;
 }
 

@@ -30,7 +30,7 @@ function TreeNode({ node, depth, onOpen, onSelect, selected, onCtx, onDropTo, dr
   const dropDir = node.dir ? node.path : node.path.split('/').slice(0, -1).join('/');
   return (
     <div>
-      <div draggable onDragStart={(e) => { setDragPath(node.path); e.dataTransfer.effectAllowed = 'move'; }}
+      <div data-path={node.path} draggable onDragStart={(e) => { setDragPath(node.path); e.dataTransfer.effectAllowed = 'move'; }}
         onDragOver={(e) => { e.preventDefault(); e.stopPropagation(); setOver(true); }}
         onDragLeave={() => setOver(false)}
         onDrop={(e) => { e.preventDefault(); e.stopPropagation(); setOver(false); onDropTo(dropDir, e); }}
@@ -58,6 +58,8 @@ export function FilesScreen() {
   const [openDirs, setOpenDirs] = useState(new Set()); // 펼친 폴더 경로 — 이동/새로고침에도 유지
   const [selected, setSelected] = useState(new Set()); // 다중 선택된 경로
   const [clip, setClip] = useState(null); // {paths:[], cut:bool} 내부 클립보드
+  const [band, setBand] = useState(null); // 러버밴드 사각형 (viewport 좌표)
+  const treePanelRef = useRef(null);
   const editorHost = useRef(null);
   const editorRef = useRef(null);
   const contentRef = useRef('');
@@ -68,15 +70,57 @@ export function FilesScreen() {
   // 보이는 노드를 순서대로 수집 (shift 범위 선택 기준)
   const collectFlat = (nodes, out) => { for (const n of nodes) { out.push(n.path); if (n.dir && openDirs.has(n.path) && n._children) collectFlat(n._children, out); } return out; };
 
-  // 다중 선택 — 단순: Ctrl/Cmd 토글, 그 외 단일. (Shift 범위는 같은 부모 목록 기준)
+  // 다중 선택 — 클릭 단일, Ctrl/Cmd 토글, Shift는 마지막 클릭(앵커)부터 화면 순서로 범위 선택
   const onSelect = (node, e) => {
+    if (e.shiftKey && lastClickRef.current) {
+      const rows = [...(treePanelRef.current?.querySelectorAll('[data-path]') || [])].map(el => el.dataset.path);
+      const a = rows.indexOf(lastClickRef.current.path), b = rows.indexOf(node.path);
+      if (a >= 0 && b >= 0) {
+        const [lo, hi] = a < b ? [a, b] : [b, a];
+        setSelected(prev => {
+          const n = (e.metaKey || e.ctrlKey) ? new Set(prev) : new Set();
+          for (let i = lo; i <= hi; i++) n.add(rows[i]);
+          return n;
+        });
+        return; // 앵커 유지
+      }
+    }
     setSelected(prev => {
       const n = new Set(prev);
       if (e.metaKey || e.ctrlKey) { n.has(node.path) ? n.delete(node.path) : n.add(node.path); }
       else { n.clear(); n.add(node.path); }
       return n;
     });
-    lastClickRef.current = node; // 붙여넣기 대상 계산용(폴더 여부 포함)
+    lastClickRef.current = node; // 붙여넣기 대상·shift 앵커
+  };
+
+  // 빈 공간 드래그 = 러버밴드 범위 선택. 움직임 없으면 = 빈 곳 클릭 → 선택 해제.
+  const onTreeMouseDown = (e) => {
+    if (e.button !== 0) return;
+    if (e.target.closest('[data-path]') || e.target.closest('[data-hdr]')) return;
+    const x1 = e.clientX, y1 = e.clientY;
+    let moved = false;
+    const onMove = (ev) => {
+      if (Math.abs(ev.clientX - x1) + Math.abs(ev.clientY - y1) > 5) moved = true;
+      if (!moved) return;
+      setBand({ x: Math.min(x1, ev.clientX), y: Math.min(y1, ev.clientY), w: Math.abs(ev.clientX - x1), h: Math.abs(ev.clientY - y1) });
+      const L = Math.min(x1, ev.clientX), R = Math.max(x1, ev.clientX), T = Math.min(y1, ev.clientY), B = Math.max(y1, ev.clientY);
+      const hit = new Set();
+      for (const el of treePanelRef.current?.querySelectorAll('[data-path]') || []) {
+        const r = el.getBoundingClientRect();
+        if (r.left < R && r.right > L && r.top < B && r.bottom > T) hit.add(el.dataset.path);
+      }
+      setSelected(hit);
+    };
+    const onUp = () => {
+      window.removeEventListener('mousemove', onMove);
+      window.removeEventListener('mouseup', onUp);
+      setBand(null);
+      if (!moved) setSelected(new Set());
+    };
+    window.addEventListener('mousemove', onMove);
+    window.addEventListener('mouseup', onUp);
+    e.preventDefault();
   };
 
   const loadRoot = async () => { try { setTree(await api.get('/files?path=')); } catch (e) { showToast(e.message); } };
@@ -229,11 +273,12 @@ export function FilesScreen() {
     <div style={{ display: 'flex', gap: '10px', height: 'calc(100vh - 72px)' }}>
       <input type="file" multiple hidden ref={fileInput} onChange={e => { uploadFiles(e.target.files, ''); e.target.value = ''; }} />
       {/* 좌: 파일 트리 (다크) */}
-      <div style={{ position: 'relative', width: '260px', flexShrink: 0, background: PANEL, borderRadius: '12px', overflow: 'auto', boxShadow: C.cardShadow, padding: '8px 4px' }}
+      <div ref={treePanelRef} style={{ position: 'relative', width: '260px', flexShrink: 0, background: PANEL, borderRadius: '12px', overflow: 'auto', boxShadow: C.cardShadow, padding: '8px 4px', userSelect: 'none' }}
+        onMouseDown={onTreeMouseDown}
         onDragOver={e => { if (dragPath || e.dataTransfer.types.includes('Files')) { e.preventDefault(); setRootOver(true); } }}
         onDragLeave={e => { if (!e.currentTarget.contains(e.relatedTarget)) setRootOver(false); }}
         onDrop={e => { e.preventDefault(); setRootOver(false); onDropTo('', e); }}>
-        <div style={{ display: 'flex', alignItems: 'center', padding: '2px 8px 8px' }}>
+        <div data-hdr style={{ display: 'flex', alignItems: 'center', padding: '2px 8px 8px' }}>
           <span style={{ fontSize: '11px', fontWeight: 700, letterSpacing: '0.08em', color: MUTE, flex: 1 }}>{isEn() ? 'WORKSPACE' : '워크스페이스'}</span>
           <span onClick={(e) => { e.stopPropagation(); setCtx({ node: null, root: true }); }} title={isEn() ? 'New…' : '새로 만들기'} style={{ cursor: 'pointer', fontSize: '15px', fontWeight: 700, color: C.mint, padding: '0 4px' }}>+</span>
           <span onClick={(e) => { e.stopPropagation(); fileInput.current?.click(); }} title={isEn() ? 'Upload' : '업로드'} style={{ cursor: 'pointer', color: MUTE, padding: '0 4px', display: 'inline-flex' }}>
@@ -243,14 +288,12 @@ export function FilesScreen() {
             <svg width="13" height="13" viewBox="0 0 24 24" fill="none" stroke="currentColor" stroke-width="2" stroke-linecap="round" stroke-linejoin="round"><path d="M3 12a9 9 0 1 0 9-9 9.75 9.75 0 0 0-6.74 2.74L3 8" /><path d="M3 3v5h5" /></svg>
           </span>
         </div>
-        {selected.size > 1 && (
-          <div style={{ fontSize: '11px', color: C.mint, padding: '2px 10px 6px' }}>{selected.size}{isEn() ? ' selected · ⌘C/⌘X/⌘V/Del' : '개 선택 · ⌘C 복사 ⌘X 잘라내기 ⌘V 붙여넣기 Del 삭제'}{clip ? (clip.cut ? ' · ✂' : ' · ⧉') : ''}</div>
-        )}
         {tree.map(n => <TreeNode key={n.path} node={n} depth={0} onOpen={openFile} onSelect={onSelect} selected={selected} onCtx={(node, e) => { if (!selected.has(node.path)) onSelect(node, e); setCtx({ node, x: e.clientX, y: e.clientY }); }} onDropTo={onDropTo} dragPath={dragPath} setDragPath={setDragPath} openDirs={openDirs} setOpenDirs={setOpenDirs} reloadKey={reloadKey} />)}
         {/* 빈 영역 — 우클릭 받도록 최소 높이 확보 */}
         <div style={{ minHeight: '140px' }} onContextMenu={e => { e.preventDefault(); setCtx({ node: null, x: e.clientX, y: e.clientY }); }} />
         {rootOver && <div style={{ position: 'absolute', inset: '4px', border: `2px dashed ${C.mint}`, borderRadius: '10px', pointerEvents: 'none' }} />}
       </div>
+      {band && <div style={{ position: 'fixed', left: `${band.x}px`, top: `${band.y}px`, width: `${band.w}px`, height: `${band.h}px`, background: 'rgba(0,117,74,0.18)', border: `1px solid ${C.mint}`, zIndex: 90, pointerEvents: 'none' }} />}
 
       {/* 우: 에디터 (다크) */}
       <div style={{ flex: 1, minWidth: 0, background: BG, borderRadius: '12px', overflow: 'hidden', boxShadow: C.cardShadow, display: 'flex', flexDirection: 'column' }}>

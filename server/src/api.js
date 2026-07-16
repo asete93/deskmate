@@ -117,27 +117,34 @@ export function createApi({ db, bus, manager, gitApi, uploadsDir, auth, termHub,
   }));
 
   // ---- 워크스페이스 파일 (탐색기·에디터) ----
-  r.get('/files', guard((req, res) => ok(res, filesApi.list(String(req.query.path || '')))));
-  r.get('/file', guard((req, res) => ok(res, filesApi.read(String(req.query.path || '')))));
-  r.post('/file', guard((req, res) => ok(res, filesApi.write(String(req.body.path || ''), req.body.content))));
-  r.post('/file/create', guard((req, res) => ok(res, filesApi.createNode(String(req.body.path || ''), !!req.body.dir))));
-  r.post('/file/rename', guard((req, res) => ok(res, filesApi.rename(String(req.body.path || ''), String(req.body.to || '')))));
-  r.delete('/file', guard((req, res) => ok(res, filesApi.remove(String(req.query.path || '')))));
-  r.post('/file/move', guard((req, res) => ok(res, filesApi.move(String(req.body.path || ''), String(req.body.toDir || '')))));
-  r.post('/file/copy', guard((req, res) => ok(res, filesApi.copy(String(req.body.path || ''), String(req.body.toDir || '')))));
+  const fmw = (req, res, next) => { if (!db.getSetting('files_enabled', true)) return res.status(403).json({ error: '파일 기능이 꺼져 있습니다' }); next(); };
+  r.post('/settings/files', guard((req, res) => {
+    db.setSetting('files_enabled', !!req.body?.enabled);
+    bus.settings();
+    bus.event('User', 'user', `파일 기능 ${req.body?.enabled ? '활성화' : '비활성화'}`);
+    ok(res);
+  }));
+  r.get('/files', fmw, guard((req, res) => ok(res, filesApi.list(String(req.query.path || '')))));
+  r.get('/file', fmw, guard((req, res) => ok(res, filesApi.read(String(req.query.path || '')))));
+  r.post('/file', fmw, guard((req, res) => ok(res, filesApi.write(String(req.body.path || ''), req.body.content))));
+  r.post('/file/create', fmw, guard((req, res) => ok(res, filesApi.createNode(String(req.body.path || ''), !!req.body.dir))));
+  r.post('/file/rename', fmw, guard((req, res) => ok(res, filesApi.rename(String(req.body.path || ''), String(req.body.to || '')))));
+  r.delete('/file', fmw, guard((req, res) => ok(res, filesApi.remove(String(req.query.path || '')))));
+  r.post('/file/move', fmw, guard((req, res) => ok(res, filesApi.move(String(req.body.path || ''), String(req.body.toDir || '')))));
+  r.post('/file/copy', fmw, guard((req, res) => ok(res, filesApi.copy(String(req.body.path || ''), String(req.body.toDir || '')))));
   // 다운로드
-  r.get('/file/download', guard((req, res) => {
+  r.get('/file/download', fmw, guard((req, res) => {
     const abs = filesApi.absPath(String(req.query.path || ''));
     res.download(abs);
   }));
   // 업로드 (워크스페이스 dstDir 안으로) — 채팅 첨부와 다른 저장소
-  r.post('/file/upload', memUpload.array('files', 20), guard((req, res) => {
+  r.post('/file/upload', fmw, memUpload.array('files', 20), guard((req, res) => {
     const dir = String(req.body.dir || '');
     const out = (req.files || []).map(f => filesApi.saveUpload(dir, Buffer.from(f.originalname, 'latin1').toString('utf8'), f.buffer));
     ok(res, out);
   }));
   // 붙여넣기 업로드 (base64 또는 텍스트)
-  r.post('/file/paste', guard((req, res) => {
+  r.post('/file/paste', fmw, guard((req, res) => {
     const { dir, name, dataBase64, text } = req.body || {};
     const buf = dataBase64 != null ? Buffer.from(String(dataBase64), 'base64') : Buffer.from(String(text ?? ''), 'utf8');
     ok(res, filesApi.saveUpload(String(dir || ''), String(name || 'pasted.txt'), buf));
