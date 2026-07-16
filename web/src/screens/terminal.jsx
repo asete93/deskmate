@@ -4,7 +4,7 @@ import { Terminal } from '@xterm/xterm';
 import { FitAddon } from '@xterm/addon-fit';
 import xtermCss from '@xterm/xterm/css/xterm.css';
 import { C } from '../ui.jsx';
-import { currentBase, authToken } from '../api.js';
+import { currentBase, authToken, api } from '../api.js';
 import { showToast } from '../store.js';
 import { isEn } from '../i18n.js';
 
@@ -43,6 +43,7 @@ function pasteInto(send) {
 // ── 단일 터미널 뷰 — 최초 1회만 연결, sid는 ref로 유지해 재연결/언마운트 없음(세션 영속). ──
 function TermPane({ sid, ephemeral = false, onSid, fontSize = 13, onFont }) {
   const host = useRef(null);
+  const tmuxRef = useRef(true); // 백엔드 종류 (ready 메시지로 갱신)
   const sidRef = useRef(sid);
   const wsRef = useRef(null);
   const termRef = useRef(null);
@@ -73,7 +74,7 @@ function TermPane({ sid, ephemeral = false, onSid, fontSize = 13, onFont }) {
           const c = JSON.parse(e.data.slice(1));
           // 서버가 준 id가 우리가 요청한 sid와 다르면(세션이 죽어 새로 생성됨) layout을 새 id로 갱신.
           // 이걸 안 하면 죽은 sid를 계속 요청해 매 새로고침마다 새 세션이 생긴다.
-          if (c.type === 'ready' && sidRef.current !== c.id) { sidRef.current = c.id; onSid?.(c.id); }
+          if (c.type === 'ready') { tmuxRef.current = !!c.tmux; if (sidRef.current !== c.id) { sidRef.current = c.id; onSid?.(c.id); } }
         } catch { /* noop */ }
         return;
       }
@@ -93,14 +94,29 @@ function TermPane({ sid, ephemeral = false, onSid, fontSize = 13, onFont }) {
     term.open(host.current);
     fit.fit();
     termRef.current = term; fitRef.current = fit;
-    // Ctrl/Cmd + 휠로 폰트 크기 조절
+    // Ctrl/Cmd+휠 = 폰트 크기. 일반 휠 = 과거 출력 스크롤(tmux copy-mode 변환 —
+    // tmux가 화면을 자체 관리해 xterm 스크롤백이 안 쌓이므로 PageUp/Down 키로 번역한다)
+    const copyModeRef = { current: false };
+    // 휠 변환은 tmux 백엔드에서만 — node-pty/script는 xterm 스크롤백이 자체 동작
+    
     const onWheel = (e) => {
-      if (!(e.ctrlKey || e.metaKey)) return;
+      if (e.ctrlKey || e.metaKey) {
+        e.preventDefault();
+        onFont?.(d => Math.min(28, Math.max(9, d + (e.deltaY < 0 ? 1 : -1))));
+        return;
+      }
+      if (!tmuxRef.current) return; // 비-tmux: 브라우저(xterm) 기본 스크롤에 맡긴다
       e.preventDefault();
-      onFont?.(d => Math.min(28, Math.max(9, d + (e.deltaY < 0 ? 1 : -1))));
+      const send = (t) => { if (wsRef.current?.readyState === 1) wsRef.current.send(t); };
+      if (e.deltaY < 0) {
+        if (!copyModeRef.current) { send('\x02['); copyModeRef.current = true; } // C-b [ = copy-mode
+        send('\x1b[5~'); // PageUp
+      } else if (copyModeRef.current) {
+        send('\x1b[6~'); // PageDown — 바닥까지 내려가면 tmux가 copy-mode 종료
+      }
     };
     host.current.addEventListener('wheel', onWheel, { passive: false });
-    term.onData(d => { if (wsRef.current?.readyState === 1) wsRef.current.send(d); });
+    term.onData(d => { copyModeRef.current = false; if (wsRef.current?.readyState === 1) wsRef.current.send(d); });
 
     const sendTxt = (t) => { if (wsRef.current?.readyState === 1) wsRef.current.send(t); };
     // 복사·붙여넣기: 키(Ctrl/Cmd+Shift+C/V) + 우클릭(선택 있으면 복사+해제, 없으면 붙여넣기)
@@ -138,7 +154,11 @@ function TermPane({ sid, ephemeral = false, onSid, fontSize = 13, onFont }) {
   return (
     <div style={{ position: 'relative', width: '100%', height: '100%', background: '#14211c', borderRadius: '8px', overflow: 'hidden' }}>
       {/* 콘텐츠는 좌상단 상태 인디케이터 아래 행부터 시작 (첫 줄 안 가리게) */}
-      <div ref={host} style={{ width: '100%', height: '100%', padding: '22px 8px 6px' }} />
+      {/* 패딩은 바깥 래퍼가 담당, host는 무패딩 — FitAddon이 패딩 계산 없이 정확한 행 수를 잡아
+          마지막 줄이 잘리지 않는다 (폰트 크기가 바뀌어도 ResizeObserver→fit이 재계산) */}
+      <div style={{ position: 'absolute', inset: '22px 8px' }}>
+        <div ref={host} style={{ width: '100%', height: '100%', overflow: 'hidden' }} />
+      </div>
       {status === 'closed' && (
         <div onClick={() => host.current?.__reconnect?.()} style={{ position: 'absolute', top: '8px', right: '10px', cursor: 'pointer', background: C.danger, color: '#fff', borderRadius: '50px', padding: '3px 12px', fontSize: '11.5px', fontWeight: 700 }}>
           {isEn() ? 'Reconnect' : '재연결'}
@@ -199,7 +219,12 @@ export function TerminalScreen() {
   const save = (t) => { try { localStorage.setItem('cc_term_layout', JSON.stringify({ tree: t, _seq: nodeSeq })); } catch { /* noop */ } };
   const setLeafSid = (id, sid) => setTree(prev => { const l = findLeaf(prev, id); if (!l) return prev; const n = replaceLeaf(prev, id, { ...l, sid }); save(n); return n; });
   const split = (id, dir) => setTree(prev => { const l = findLeaf(prev, id); const n = replaceLeaf(prev, id, { split: dir, ratio: 0.5, a: l, b: leaf() }); save(n); return n; });
-  const closePane = (id) => setTree(prev => { const n = removeLeaf(prev, id) || leaf(); save(n); return n; });
+  // X = 이 화면의 창(연결)만 닫는다 — 서버 tmux 세션은 살아있어 다시 붙을 수 있다.
+  // 마지막 창이면 빈 리프로 교체 → 새 세션이 열린다.
+  const closePane = (id) => setTree(prev => {
+    const n = removeLeaf(prev, id) || leaf();
+    save(n); return n;
+  });
   const setFont = (id, fn) => setFonts(prev => { const cur = prev[id] || 13; const next = { ...prev, [id]: fn(cur) }; try { localStorage.setItem('cc_term_fonts', JSON.stringify(next)); } catch { /* noop */ } return next; });
   // 헤더 DnD — 두 리프 노드를 위치 교환(id·sid 통째 이동 → key 따라 TermPane 이동, 세션 유지)
   const swapPanes = (aId, bId) => setTree(prev => {
@@ -245,7 +270,7 @@ export function TerminalScreen() {
   );
 
   return (
-    <div style={{ display: 'flex', flexDirection: 'column', gap: mobile ? '8px' : '0', height: mobile ? 'calc(100vh - 96px)' : 'calc(100vh - 72px)' }}>
+    <div style={{ display: 'flex', flexDirection: 'column', gap: mobile ? '8px' : '0', height: mobile ? 'calc(100vh - 162px)' : 'calc(100vh - 112px)' }}>
       {/* 데스크탑은 상단 바 없이 터미널만 (분할/폰트/이동/닫기는 각 창 헤더에). 모바일만 세션 선택 바. */}
       {mobile && (
         <div style={{ display: 'flex', alignItems: 'center', gap: '4px' }}>
@@ -254,7 +279,7 @@ export function TerminalScreen() {
             {ids.map((id, i) => <option key={id} value={id}>{isEn() ? `Terminal ${i + 1}` : `터미널 ${i + 1}`}</option>)}
           </select>
           {iconBtn(() => split(activeId, 'row'), isEn() ? 'New terminal' : '새 터미널', '<line x1="12" y1="5" x2="12" y2="19"/><line x1="5" y1="12" x2="19" y2="12"/>')}
-          {ids.length > 1 && iconBtn(() => closePane(activeId), isEn() ? 'Close' : '닫기', '<line x1="18" y1="6" x2="6" y2="18"/><line x1="6" y1="6" x2="18" y2="18"/>')}
+          {iconBtn(() => closePane(activeId), isEn() ? 'Close pane' : '창 닫기', '<line x1="18" y1="6" x2="6" y2="18"/><line x1="6" y1="6" x2="18" y2="18"/>')}
         </div>
       )}
 
@@ -284,7 +309,7 @@ export function TerminalScreen() {
                   <PaneBtn title="글자 크게" path='<line x1="12" y1="5" x2="12" y2="19"/><line x1="5" y1="12" x2="19" y2="12"/>' onClick={() => setFont(id, d => Math.min(28, d + 1))} />
                   <PaneBtn title="세로 분할" path='<rect x="3" y="3" width="18" height="18" rx="1"/><line x1="12" y1="3" x2="12" y2="21"/>' onClick={() => split(id, 'row')} />
                   <PaneBtn title="가로 분할" path='<rect x="3" y="3" width="18" height="18" rx="1"/><line x1="3" y1="12" x2="21" y2="12"/>' onClick={() => split(id, 'col')} />
-                  {ids.length > 1 && <PaneBtn title="창 닫기" path='<line x1="18" y1="6" x2="6" y2="18"/><line x1="6" y1="6" x2="18" y2="18"/>' onClick={() => closePane(id)} />}
+                  <PaneBtn title={ids.length > 1 ? '창 닫기 (서버 세션은 유지)' : '이 창 연결 해제 — 새 세션으로 시작'} path='<line x1="18" y1="6" x2="6" y2="18"/><line x1="6" y1="6" x2="18" y2="18"/>' onClick={() => closePane(id)} />
                 </div>
               )}
               {overId === id && <div style={{ position: 'absolute', inset: 0, zIndex: 6, border: `2px solid ${C.cta}`, borderRadius: '8px', background: 'rgba(0,117,74,0.12)', pointerEvents: 'none' }} />}

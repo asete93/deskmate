@@ -270,7 +270,7 @@ export function FilesScreen() {
   };
 
   return (
-    <div style={{ display: 'flex', gap: '10px', height: 'calc(100vh - 72px)' }}>
+    <div style={{ display: 'flex', gap: '10px', height: 'calc(100vh - 112px)' }}>
       <input type="file" multiple hidden ref={fileInput} onChange={e => { uploadFiles(e.target.files, ''); e.target.value = ''; }} />
       {/* 좌: 파일 트리 (다크) */}
       <div ref={treePanelRef} style={{ position: 'relative', width: '260px', flexShrink: 0, background: PANEL, borderRadius: '12px', overflow: 'auto', boxShadow: C.cardShadow, padding: '8px 4px', userSelect: 'none' }}

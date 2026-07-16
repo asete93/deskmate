@@ -196,16 +196,20 @@ function FormCard({ m, answer }) {
 // ---- 상세 원문 팝업 (마크다운 렌더) ----
 marked.use({ gfm: true, breaks: true });
 const MD_CSS = `
-.md-body{font-size:14px;line-height:1.7;color:#22302b;overflow-wrap:break-word}
-.md-body h1,.md-body h2,.md-body h3{margin:18px 0 8px;color:#14211c}
+.md-body{font-size:14px;line-height:1.55;color:#22302b;overflow-wrap:break-word;white-space:normal}
+.md-body>*:first-child{margin-top:0}
+.md-body h1,.md-body h2,.md-body h3{margin:14px 0 5px;color:#14211c}
 .md-body h1{font-size:18px}.md-body h2{font-size:16.5px}.md-body h3{font-size:15px}
-.md-body p{margin:8px 0}
-.md-body ul,.md-body ol{padding-left:22px;margin:8px 0}
+.md-body p{margin:5px 0}
+.md-body ul,.md-body ol{padding-left:22px;margin:5px 0}
+.md-body li{margin:2px 0}
+.md-body li>p{margin:0}
+.md-body li>ul,.md-body li>ol{margin:2px 0}
 .md-body table{border-collapse:collapse;margin:12px 0;font-size:13px;max-width:100%;display:block;overflow-x:auto}
 .md-body th,.md-body td{border:1px solid #ddd8cc;padding:6px 10px;text-align:left;vertical-align:top}
 .md-body th{background:#f4f2ec;font-weight:700}
 .md-body code{background:#f4f2ec;border-radius:4px;padding:1px 5px;font-size:12.5px}
-.md-body pre{background:#f4f2ec;padding:12px;border-radius:8px;overflow-x:auto}
+.md-body pre{background:#f4f2ec;padding:12px;border-radius:8px;overflow-x:auto;white-space:pre}
 .md-body pre code{background:none;padding:0}
 .md-body hr{border:none;border-top:1px dashed #ddd8cc;margin:16px 0}
 .md-body blockquote{border-left:3px solid #cfe6dd;margin:8px 0;padding:2px 12px;color:#5a6660}
@@ -261,10 +265,12 @@ function summarize(text) {
 }
 
 // 에이전트 발화 본문 — 길면 요약(첫 문장+목차)만 보이고 원문은 팝업 (attach_detail을 안 쓴 경우의 안전망)
+// 마크다운의 문단 구분(빈 줄)은 말풍선에선 행간만 벌리므로 한 줄로 접는다 (원문 팝업은 그대로)
+const tighten = (t) => String(t || '').replace(/\n[ \t]*\n+/g, '\n');
 export function AgentText({ text, light = false }) {
   const [open, setOpen] = useState(false);
   const LIMIT = 400;
-  if (!text || text.length <= LIMIT) return <Linkify text={text} light={light} />;
+  if (!text || text.length <= LIMIT) return <Linkify text={tighten(text)} light={light} />;
   return (
     <>
       <Linkify text={summarize(text)} light={light} />
@@ -499,7 +505,7 @@ export function RoomFeed({ channel, inCard = false }) {
   }
 
   return (
-    <div ref={ref} style={{ overflowY: 'auto', height: listH, display: 'flex', flexDirection: 'column', gap: '10px', padding: inCard ? '16px 14px' : '4px 2px' }}>
+    <div ref={ref} style={{ overflowY: 'auto', height: listH, display: 'flex', flexDirection: 'column', gap: '18px', padding: inCard ? '16px 14px' : '4px 2px' }}>
       {rows.map((r, i) => {
         if (r.divider) return <ReqDivider key={`d${r.divider.id}-${i}`} req={r.divider} onReport={setReportReq} />;
         const m = r.m;
@@ -507,9 +513,9 @@ export function RoomFeed({ channel, inCard = false }) {
           const from = actorChip(m.from_actor);
           return (
             <div key={m.id} style={{ display: 'flex', flexDirection: 'column', alignItems: 'flex-start' }}>
-              <div style={{ display: 'flex', alignItems: 'center', gap: '5px', marginBottom: '3px' }}>
-                <Chip bg={from.bg} color={from.color} style={{ fontSize: '10.5px' }}>{actorLabel(m.from_actor)}</Chip>
-                <span style={{ fontSize: '10.5px', color: C.t58 }}>{fmtTime(m.ts)}</span>
+              <div style={{ display: 'flex', alignItems: 'center', gap: '7px', marginBottom: '6px' }}>
+                <Chip bg={from.bg} color={from.color} style={{ fontSize: '12px', fontWeight: 700, padding: '3px 10px' }}>{actorLabel(m.from_actor)}</Chip>
+                <span style={{ fontSize: '11.5px', color: C.t58 }}>{fmtTime(m.ts)}</span>
               </div>
               <ReportLinkCard m={m} />
             </div>
@@ -527,11 +533,11 @@ export function RoomFeed({ channel, inCard = false }) {
           const toChip = actorChip(m.to_actor);
           return (
             <div key={m.id} style={{ display: 'flex', flexDirection: 'column', alignItems: 'flex-end' }}>
-              <div style={{ display: 'flex', alignItems: 'center', gap: '5px', marginBottom: '3px' }}>
-                <span style={{ fontSize: '10.5px', color: C.t58 }}>{fmtTime(m.ts)}</span>
-                <Chip bg={C.goldLight} color={C.goldText} style={{ fontSize: '10.5px' }}>{t('대표')}</Chip>
-                <span style={{ fontSize: '10px', color: C.t58 }}>→</span>
-                <Chip bg={toChip.bg} color={toChip.color} style={{ fontSize: '10.5px' }}>{actorLabel(m.to_actor)}</Chip>
+              <div style={{ display: 'flex', alignItems: 'center', gap: '7px', marginBottom: '6px' }}>
+                <span style={{ fontSize: '11.5px', color: C.t58 }}>{fmtTime(m.ts)}</span>
+                <Chip bg={C.goldLight} color={C.goldText} style={{ fontSize: '12px', fontWeight: 700, padding: '3px 10px' }}>{t('대표')}</Chip>
+                <span style={{ fontSize: '13px', fontWeight: 700, color: C.t87 }}>→</span>
+                <Chip bg={toChip.bg} color={toChip.color} style={{ fontSize: '12px', fontWeight: 700, padding: '3px 10px' }}>{actorLabel(m.to_actor)}</Chip>
               </div>
               <div style={{ maxWidth: '78%', background: C.cta, color: '#fff', borderRadius: '16px 16px 4px 16px', padding: '10px 15px', fontSize: '14px', lineHeight: 1.55, whiteSpace: 'pre-wrap', overflowWrap: 'break-word' }}><Linkify text={m.content.text} light /></div>
               <Attachments atts={m.content.attachments} align="flex-end" />
@@ -543,12 +549,12 @@ export function RoomFeed({ channel, inCard = false }) {
         const Card = CARDS[m.kind];
         return (
           <div key={m.id} style={{ display: 'flex', flexDirection: 'column', alignItems: 'flex-start' }}>
-            <div style={{ display: 'flex', alignItems: 'center', gap: '5px', marginBottom: '3px' }}>
-              <Chip bg={from.bg} color={from.color} style={{ fontSize: '10.5px' }}>{actorLabel(m.from_actor)}</Chip>
-              <span style={{ fontSize: '10px', color: C.t58 }}>→</span>
-              <Chip bg={to.bg} color={to.color} style={{ fontSize: '10.5px' }}>{m.to_actor === 'User' ? t('대표') : actorLabel(m.to_actor)}</Chip>
-              <span style={{ fontSize: '10.5px', color: C.t58 }}>{fmtTime(m.ts)}</span>
-              {Card && <span style={{ fontSize: '10.5px', fontWeight: 600, color: C.goldText }}>· {t(CARD_TITLES[m.kind])}</span>}
+            <div style={{ display: 'flex', alignItems: 'center', gap: '7px', marginBottom: '6px' }}>
+              <Chip bg={from.bg} color={from.color} style={{ fontSize: '12px', fontWeight: 700, padding: '3px 10px' }}>{actorLabel(m.from_actor)}</Chip>
+              <span style={{ fontSize: '13px', fontWeight: 700, color: C.t87 }}>→</span>
+              <Chip bg={to.bg} color={to.color} style={{ fontSize: '12px', fontWeight: 700, padding: '3px 10px' }}>{m.to_actor === 'User' ? t('대표') : actorLabel(m.to_actor)}</Chip>
+              <span style={{ fontSize: '11.5px', color: C.t58 }}>{fmtTime(m.ts)}</span>
+              {Card && <span style={{ fontSize: '11.5px', fontWeight: 600, color: C.goldText }}>· {t(CARD_TITLES[m.kind])}</span>}
             </div>
             <div style={{ width: '100%', maxWidth: Card ? '620px' : '78%' }}>
               {Card

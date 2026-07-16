@@ -6,12 +6,16 @@ import { spawn, execSync } from 'node:child_process';
 //   2) node-pty — 세션은 WS와 독립적으로 영속하나 서버 재기동 시 소실. 리사이즈가 ioctl이라 화면 잔상 없음.
 //   3) script(util-linux) — 의존성 0 폴백.
 const MAX_BUFFER = 256 * 1024;
+// 고아 세션 GC: 마지막 클라이언트가 끊긴 뒤 이 시간 동안 아무도 재접속하지 않으면 종료.
+// (새로고침·잠깐 이탈은 재접속으로 타이머가 풀리고, X로 버려진 세션은 찌꺼기로 안 남는다)
+const IDLE_TTL = Number(process.env.CC_TERM_IDLE_MS) || 30 * 60_000;
 
 let nodePty = null;
 try { nodePty = (await import('node-pty')).default || (await import('node-pty')); } catch { nodePty = null; }
 
+// tmux 백엔드 비활성 — node-pty 고정 (사용자 선택: 세션은 서버 프로세스 수명 동안 유지,
+// 서버 재시작 시 소실. 대신 단일 프로세스로 단순하고 tmux 의존성이 없다.)
 let hasTmux = false;
-try { execSync('tmux -V', { stdio: 'ignore' }); hasTmux = !!nodePty; } catch { hasTmux = false; }
 const TMUX_PREFIX = 'cc-';
 
 function tmuxList() {
@@ -36,6 +40,9 @@ function openPty({ cwd, cols, rows, tmuxName }) {
         execSync(`tmux set-option -t ${tmuxName} status off \\; set-option -t ${tmuxName} history-limit 20000 \\; set-option -t ${tmuxName} mouse off`);
       } catch { /* noop */ }
     }
+    // smcup/rmcup 제거: attach가 alternate screen을 쓰지 않게 해 tmux 출력이
+    // 브라우저 xterm의 스크롤백에 쌓인다 → 마우스 휠로 과거 출력 스크롤 가능.
+    try { execSync(`tmux set-option -g terminal-overrides 'xterm*:smcup@:rmcup@' 2>/dev/null || true`); } catch { /* tmux 서버 없음 */ }
     const p = nodePty.spawn('tmux', ['attach-session', '-t', tmuxName], { name: 'xterm-256color', cols, rows, cwd, env });
     return {
       kind: 'tmux',
@@ -97,9 +104,10 @@ export function createTerminalHub({ cwd }) {
     if (!s && reqId && hasTmux && !ephemeral && tmuxList().includes(reqId)) s = open(reqId, { cols, rows });
     if (!s) s = create({ ephemeral, cols, rows });
     else setSize(s, cols, rows);
+    clearTimeout(s.gcTimer); // 재접속 — 유휴 GC 취소
     if (!s.tmux) { const replay = Buffer.concat(s.buffer.map(b => (Buffer.isBuffer(b) ? b : Buffer.from(b)))); if (replay.length && ws.readyState === 1) ws.send(replay); }
     s.clients.add(ws);
-    if (ws.readyState === 1) ws.send('\x00' + JSON.stringify({ type: 'ready', id: s.id, title: s.title }));
+    if (ws.readyState === 1) ws.send('\x00' + JSON.stringify({ type: 'ready', id: s.id, title: s.title, tmux: !!s.tmux }));
     // tmux는 attach 시 화면을 다시 그리도록 refresh 요청
     if (s.tmux) setTimeout(() => { try { execSync(`tmux refresh-client -t ${TMUX_PREFIX + s.id} 2>/dev/null || true`); } catch { /* noop */ } }, 50);
 
@@ -116,6 +124,14 @@ export function createTerminalHub({ cwd }) {
       if (s.clients.size === 0) {
         if (s.ephemeral) { s.pty.kill(); sessions.delete(s.id); }
         else if (s.tmux) { s.pty.detach(); sessions.delete(s.id); } // tmux 세션은 살려두고 메모리만 정리
+        else {
+          // node-pty: 유휴 GC 예약 — TTL 안에 재접속 없으면 프로세스 종료
+          clearTimeout(s.gcTimer);
+          s.gcTimer = setTimeout(() => {
+            if (s.clients.size === 0) { try { s.pty.kill(); } catch { /* noop */ } sessions.delete(s.id); }
+          }, IDLE_TTL);
+          if (s.gcTimer.unref) s.gcTimer.unref();
+        }
       }
     });
   }
