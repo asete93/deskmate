@@ -1,0 +1,48 @@
+name: claude-control
+
+# 동일 서비스 2개 인스턴스 — CONNECTED SERVICE 스위처 데모 (:3200 / :3201)
+#
+# 인증 (실 Claude Code 제어 시):
+#  - API 키:      ANTHROPIC_API_KEY=sk-ant-... docker compose up -d
+#  - 구독(OAuth): 호스트에서 `claude setup-token` → CLAUDE_CODE_OAUTH_TOKEN=... docker compose up -d
+#    (Pro/Max 구독 사용량으로 과금, API 크레딧 불필요)
+#  - 둘 다 없으면 목 드라이버로 기동
+services:
+  control-a:
+    build: .
+    container_name: claude-control-a
+    environment:
+      SERVICE_NAME: Claude Control A
+      PORT: "3200"
+      AGENT_DRIVER: ${AGENT_DRIVER:-auto}
+      ANTHROPIC_API_KEY: ${ANTHROPIC_API_KEY:-}
+      CLAUDE_CODE_OAUTH_TOKEN: ${CLAUDE_CODE_OAUTH_TOKEN:-}
+    ports:
+      - "3200:3200"
+    volumes:
+      - data-a:/data
+      # 세션 transcript(~/.claude/projects) 영속화 — 재빌드에도 resume 가능
+      - claude-home-a:/root/.claude
+    restart: unless-stopped
+
+  control-b:
+    build: .
+    container_name: claude-control-b
+    environment:
+      SERVICE_NAME: Claude Control B
+      PORT: "3200"
+      AGENT_DRIVER: ${AGENT_DRIVER:-auto}
+      ANTHROPIC_API_KEY: ${ANTHROPIC_API_KEY:-}
+      CLAUDE_CODE_OAUTH_TOKEN: ${CLAUDE_CODE_OAUTH_TOKEN:-}
+    ports:
+      - "3201:3200"
+    volumes:
+      - data-b:/data
+      - claude-home-b:/root/.claude
+    restart: unless-stopped
+
+volumes:
+  data-a:
+  data-b:
+  claude-home-a:
+  claude-home-b:

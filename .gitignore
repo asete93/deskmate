@@ -1,0 +1,14 @@
+# 런타임 데이터 — 대화·비밀번호 해시·인증 토큰·업로드 파일 포함. 절대 커밋 금지
+data/
+*.db
+*.db-shm
+*.db-wal
+
+# 환경 변수 — API 키/OAuth 토큰이 들어갈 수 있음 (.env.example만 커밋)
+.env
+
+# 의존성 (web/dist는 커밋 — npx github: 설치 시 빌드 없이 즉시 실행)
+node_modules/
+
+# OS/에디터
+.DS_Store

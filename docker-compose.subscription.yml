@@ -1,0 +1,17 @@
+# 구독 인증 오버레이 (Linux 호스트) — 호스트의 Claude Code 로그인 자격을 컨테이너에 마운트.
+# 사용:  docker compose -f docker-compose.yml -f docker-compose.subscription.yml up -d --build
+# macOS는 자격이 키체인에 있어 마운트 불가 → CLAUDE_CODE_OAUTH_TOKEN 방식 사용.
+#
+# 읽기전용(:ro)으로 /host-claude에 마운트 → 엔트리포인트가 쓰기가능 홈으로 복사.
+# (SDK가 debug/로그를 자기 홈에 써야 하므로 직접 :ro 마운트하면 EROFS 크래시)
+services:
+  control-a:
+    environment:
+      AGENT_DRIVER: sdk
+    volumes:
+      - ${HOME}/.claude:/host-claude:ro
+  control-b:
+    environment:
+      AGENT_DRIVER: sdk
+    volumes:
+      - ${HOME}/.claude:/host-claude:ro
