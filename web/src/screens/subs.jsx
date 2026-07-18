@@ -106,16 +106,16 @@ function HireModal({ onClose }) {
   return (
     <Modal onClose={onClose} maxWidth="520px">
       <div style={{ fontSize: '17px', fontWeight: 700, color: C.heading, marginBottom: '4px' }}>{t('팀원 고용 (대표 권한)')}</div>
-      <div style={{ fontSize: '12.5px', color: C.t58, marginBottom: '16px' }}>결재 절차 없이 즉시 입사합니다. 스펙은 입사 후에도 변경할 수 있습니다.</div>
+      <div style={{ fontSize: '12.5px', color: C.t58, marginBottom: '16px' }}>{t('결재 절차 없이 즉시 입사합니다. 스펙은 입사 후에도 변경할 수 있습니다.')}</div>
       <div style={{ display: 'flex', flexDirection: 'column', gap: '14px' }}>
         <div style={{ display: 'flex', gap: '10px' }}>
           <div style={{ flex: 1 }}>
-            <div style={label}>이름 (공백 불가 — @호출용)</div>
-            <input value={name} onInput={e => setName(e.target.value)} placeholder="예: QA담당" style={inputStyle} />
+            <div style={label}>{t('이름 (공백 불가 — @호출용)')}</div>
+            <input value={name} onInput={e => setName(e.target.value)} placeholder={t("예: QA담당")} style={inputStyle} />
           </div>
           <div style={{ flex: 1.4 }}>
-            <div style={label}>역할</div>
-            <input value={role} onInput={e => setRole(e.target.value)} placeholder="예: 테스트·검증 전담" style={inputStyle} />
+            <div style={label}>{t('역할')}</div>
+            <input value={role} onInput={e => setRole(e.target.value)} placeholder={t("예: 테스트·검증 전담")} style={inputStyle} />
           </div>
         </div>
         <div>
@@ -131,13 +131,13 @@ function HireModal({ onClose }) {
           </div>
         </div>
         <div>
-          <div style={label}>커스텀 지침 (선택)</div>
-          <textarea value={prompt} onInput={e => setPrompt(e.target.value)} rows={3} placeholder="이 팀원에게만 적용할 추가 지침"
+          <div style={label}>{t('커스텀 지침 (선택)')}</div>
+          <textarea value={prompt} onInput={e => setPrompt(e.target.value)} rows={3} placeholder={t("이 팀원에게만 적용할 추가 지침")}
             style={{ ...inputStyle, resize: 'vertical', lineHeight: 1.5 }} />
         </div>
         <div style={{ display: 'flex', gap: '10px', justifyContent: 'flex-end' }}>
           <Btn variant="darkOutline" onClick={onClose}>{t('취소')}</Btn>
-          <Btn variant="primary" onClick={hire} disabled={!name.trim() || busy}>{busy ? '입사 처리 중…' : '고용'}</Btn>
+          <Btn variant="primary" onClick={hire} disabled={!name.trim() || busy}>{busy ? t('입사 처리 중…') : t('고용')}</Btn>
         </div>
       </div>
     </Modal>
@@ -176,10 +176,10 @@ export function SubsScreen({ param, openAi }) {
             if (confirm(`${sel.name}의 대화를 초기화할까요?\n대화 내용과 기억이 모두 지워집니다. (누적 세션이 길어지면 토큰이 낭비됩니다)`)) {
               api.post(`/threads/${encodeURIComponent(`sub:${sel.id}`)}/clear`).catch(e => showToast(e.message));
             }
-          }} title="대화 초기화 — 이 팀원의 대화 내용과 기억을 비웁니다" style={iconBtn(false)}>
+          }} title={t('대화 초기화 — 이 팀원의 대화 내용과 기억을 비웁니다')} style={iconBtn(false)}>
             <svg width="15" height="15" viewBox="0 0 24 24" fill="none" stroke="currentColor" stroke-width="2" stroke-linecap="round" stroke-linejoin="round"><path d="M3 12a9 9 0 1 0 9-9 9.75 9.75 0 0 0-6.74 2.74L3 8" /><path d="M3 3v5h5" /></svg>
           </span>
-          <span onClick={() => setChatCfgOpen(!chatCfgOpen)} title="팀원 설정 (이름·역할·지침·모델)" style={iconBtn(chatCfgOpen)}>{I.settings(15)}</span>
+          <span onClick={() => setChatCfgOpen(!chatCfgOpen)} title={t('팀원 설정 (이름·역할·지침·모델)')} style={iconBtn(chatCfgOpen)}>{I.settings(15)}</span>
         </div>
       </div>
     );
@@ -237,7 +237,7 @@ export function SubsScreen({ param, openAi }) {
           <div onClick={() => setView('list')} style={tabStyle(true)}>{t('팀원 목록')}</div>
           <div onClick={() => setView('org')} style={tabStyle(false)}>{t('조직도')}</div>
         </div>
-        <div style={{ fontSize: '14px', fontWeight: 600, color: C.t58 }}>가동 중인 팀원 {subs.length}기</div>
+        <div style={{ fontSize: '14px', fontWeight: 600, color: C.t58 }}>{t('가동 중인 팀원')} {subs.length}</div>
         <div style={{ marginLeft: 'auto', display: 'flex', gap: '8px' }}>
           <Btn variant="primary" onClick={() => setHireOpen(true)}>{t('+ 팀원 고용')}</Btn>
           <Btn variant="outline" onClick={openAi}>{t('외부 AI 연동')}</Btn>
@@ -249,8 +249,7 @@ export function SubsScreen({ param, openAi }) {
           <div style={{ display: 'flex', justifyContent: 'center', color: C.cta, marginBottom: '12px' }}>{I.subs(44)}</div>
           <div style={{ fontSize: '18px', fontWeight: 700, color: C.heading }}>{t('아직 팀원이 없습니다')}</div>
           <div style={{ fontSize: '13.5px', color: C.t58, marginTop: '8px', lineHeight: 1.7, maxWidth: '440px', margin: '8px auto 0' }}>
-            구현·검증 작업은 팀원이 담당합니다. 대표 권한으로 직접 고용하거나,
-            팀장에게 작업을 요청하면 팀장이 필요한 팀원의 고용 결재를 올립니다.
+            {t('구현·검증 작업은 팀원이 담당합니다. 대표 권한으로 직접 고용하거나, 팀장에게 작업을 요청하면 팀장이 필요한 팀원의 고용 결재를 올립니다.')}
           </div>
           <div style={{ display: 'flex', gap: '10px', justifyContent: 'center', marginTop: '20px', flexWrap: 'wrap' }}>
             <Btn variant="primary" onClick={() => setHireOpen(true)}>{t('+ 첫 팀원 고용하기')}</Btn>

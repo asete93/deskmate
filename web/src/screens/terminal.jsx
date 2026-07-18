@@ -6,7 +6,7 @@ import xtermCss from '@xterm/xterm/css/xterm.css';
 import { C } from '../ui.jsx';
 import { currentBase, authToken, api } from '../api.js';
 import { showToast } from '../store.js';
-import { isEn } from '../i18n.js';
+import { isEn, t } from '../i18n.js';
 
 const GAP = 5; // 터미널 사이 간격(px)
 
@@ -300,16 +300,16 @@ export function TerminalScreen() {
               {/* 창 헤더 — 이동 핸들(드래그) + 폰트 +/− + 분할/닫기 (데스크탑) */}
               {!mobile && (
                 <div style={{ position: 'absolute', top: '4px', right: '6px', zIndex: 5, display: 'flex', alignItems: 'center', gap: '1px', background: 'rgba(13,21,18,0.72)', borderRadius: '8px', padding: '1px 2px' }}>
-                  <span draggable title="드래그해서 위치 이동" onDragStart={() => setDragId(id)} onDragEnd={() => { setDragId(null); setOverId(null); }}
+                  <span draggable title={t('드래그해서 위치 이동')} onDragStart={() => setDragId(id)} onDragEnd={() => { setDragId(null); setOverId(null); }}
                     style={{ cursor: 'grab', display: 'inline-flex', padding: '4px', color: 'rgba(255,255,255,0.5)' }}>
                     <svg width="13" height="13" viewBox="0 0 24 24" fill="currentColor"><circle cx="9" cy="6" r="1.4"/><circle cx="15" cy="6" r="1.4"/><circle cx="9" cy="12" r="1.4"/><circle cx="15" cy="12" r="1.4"/><circle cx="9" cy="18" r="1.4"/><circle cx="15" cy="18" r="1.4"/></svg>
                   </span>
-                  <PaneBtn title="글자 작게" path='<line x1="5" y1="12" x2="19" y2="12"/>' onClick={() => setFont(id, d => Math.max(9, d - 1))} />
+                  <PaneBtn title={t('글자 작게')} path='<line x1="5" y1="12" x2="19" y2="12"/>' onClick={() => setFont(id, d => Math.max(9, d - 1))} />
                   <span style={{ fontSize: '10px', color: 'rgba(255,255,255,0.55)', minWidth: '16px', textAlign: 'center' }}>{fonts[id] || 13}</span>
-                  <PaneBtn title="글자 크게" path='<line x1="12" y1="5" x2="12" y2="19"/><line x1="5" y1="12" x2="19" y2="12"/>' onClick={() => setFont(id, d => Math.min(28, d + 1))} />
-                  <PaneBtn title="세로 분할" path='<rect x="3" y="3" width="18" height="18" rx="1"/><line x1="12" y1="3" x2="12" y2="21"/>' onClick={() => split(id, 'row')} />
-                  <PaneBtn title="가로 분할" path='<rect x="3" y="3" width="18" height="18" rx="1"/><line x1="3" y1="12" x2="21" y2="12"/>' onClick={() => split(id, 'col')} />
-                  <PaneBtn title={ids.length > 1 ? '창 닫기 (서버 세션은 유지)' : '이 창 연결 해제 — 새 세션으로 시작'} path='<line x1="18" y1="6" x2="6" y2="18"/><line x1="6" y1="6" x2="18" y2="18"/>' onClick={() => closePane(id)} />
+                  <PaneBtn title={t('글자 크게')} path='<line x1="12" y1="5" x2="12" y2="19"/><line x1="5" y1="12" x2="19" y2="12"/>' onClick={() => setFont(id, d => Math.min(28, d + 1))} />
+                  <PaneBtn title={t('세로 분할')} path='<rect x="3" y="3" width="18" height="18" rx="1"/><line x1="12" y1="3" x2="12" y2="21"/>' onClick={() => split(id, 'row')} />
+                  <PaneBtn title={t('가로 분할')} path='<rect x="3" y="3" width="18" height="18" rx="1"/><line x1="3" y1="12" x2="21" y2="12"/>' onClick={() => split(id, 'col')} />
+                  <PaneBtn title={ids.length > 1 ? t('창 닫기 (서버 세션은 유지)') : t('이 창 연결 해제 — 새 세션으로 시작')} path='<line x1="18" y1="6" x2="6" y2="18"/><line x1="6" y1="6" x2="18" y2="18"/>' onClick={() => closePane(id)} />
                 </div>
               )}
               {overId === id && <div style={{ position: 'absolute', inset: 0, zIndex: 6, border: `2px solid ${C.cta}`, borderRadius: '8px', background: 'rgba(0,117,74,0.12)', pointerEvents: 'none' }} />}

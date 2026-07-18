@@ -273,7 +273,7 @@ function UsageWidget() {
     if (window.innerWidth < 840) return null; // 모바일: 플로팅 아이콘 없음 — 하단 탭에서 열기
     // 비활성: 아이콘만
     return (
-      <div onClick={() => setOpen(true)} title="Claude 사용량 모니터"
+      <div onClick={() => setOpen(true)} title={t('Claude 사용량 모니터')}
         style={{ position: 'fixed', right: '18px', bottom: fixedBottom, zIndex: 119, width: '44px', height: '44px', borderRadius: '50%', cursor: 'pointer', display: 'flex', alignItems: 'center', justifyContent: 'center', background: C.dark, color: '#fff', boxShadow: '0 3px 8px rgba(0,0,0,0.3)' }}>
         <svg width="20" height="20" viewBox="0 0 24 24" fill="none" stroke="currentColor" stroke-width="2" stroke-linecap="round" stroke-linejoin="round">
           <path d="M12 20V10" /><path d="M18 20V4" /><path d="M6 20v-4" />
@@ -289,8 +289,8 @@ function UsageWidget() {
         <span style={dotStyle(C.mint, 7, true)} />
         <span style={{ fontSize: '12px', fontWeight: 700, letterSpacing: '0.08em', color: 'rgba(255,255,255,0.8)' }}>{isEn() ? 'CLAUDE USAGE' : 'CLAUDE 사용량'}</span>
         {plan && <span style={{ fontSize: '10.5px', fontWeight: 700, background: C.gold, color: C.dark, borderRadius: '50px', padding: '1px 9px' }}>{plan}</span>}
-        {store.usage.stale && <span title="일시적 조회 제한 — 마지막 값 표시 중" style={{ fontSize: '10px', color: 'rgba(255,255,255,0.5)' }}>지연</span>}
-        <span onClick={() => setOpen(false)} title="닫기"
+        {store.usage.stale && <span title={t('일시적 조회 제한 — 마지막 값 표시 중')} style={{ fontSize: '10px', color: 'rgba(255,255,255,0.5)' }}>지연</span>}
+        <span onClick={() => setOpen(false)} title={t('닫기')}
           style={{ marginLeft: 'auto', cursor: 'pointer', color: 'rgba(255,255,255,0.6)', fontSize: '14px', lineHeight: 1, padding: '2px 4px' }}>✕</span>
       </div>
       {limits.length === 0 ? (
@@ -334,20 +334,20 @@ export function GoalModal({ onClose }) {
   const history = [...(store.goal_history || [])].reverse(); // 최신 먼저
   return (
     <Modal onClose={onClose}>
-      <div style={{ fontSize: '18px', fontWeight: 600, color: C.heading }}>팀장 목표 수정</div>
-      <div style={{ fontSize: '13px', color: C.t58, marginTop: '4px' }}>저장 시 팀장이 계획을 재수립합니다.</div>
+      <div style={{ fontSize: '18px', fontWeight: 600, color: C.heading }}>{t('팀장 목표 수정')}</div>
+      <div style={{ fontSize: '13px', color: C.t58, marginTop: '4px' }}>{t('저장 시 팀장이 계획을 재수립합니다.')}</div>
       <textarea value={draft} onInput={e => setDraft(e.target.value)} rows={4}
         style={{ width: '100%', marginTop: '16px', border: `1px solid ${C.border}`, borderRadius: '8px', padding: '14px', fontSize: '14.5px', lineHeight: 1.6, outlineColor: C.cta, resize: 'vertical' }} />
       <div style={{ display: 'flex', gap: '10px', justifyContent: 'flex-end', marginTop: '16px' }}>
         <Btn variant="darkOutline" onClick={onClose}>{t('취소')}</Btn>
-        <Btn variant="primary" onClick={save}>저장</Btn>
+        <Btn variant="primary" onClick={save}>{t('저장')}</Btn>
       </div>
 
       {/* 목표 수정 이력 */}
       <div style={{ marginTop: '22px', borderTop: `1px solid ${C.line}`, paddingTop: '16px' }}>
-        <div style={{ fontSize: '11px', fontWeight: 600, letterSpacing: '0.08em', color: C.t58, marginBottom: '10px' }}>수정 이력</div>
+        <div style={{ fontSize: '11px', fontWeight: 600, letterSpacing: '0.08em', color: C.t58, marginBottom: '10px' }}>{t('수정 이력')}</div>
         {history.length === 0 ? (
-          <div style={{ fontSize: '13px', color: C.t58 }}>아직 수정 이력이 없습니다.</div>
+          <div style={{ fontSize: '13px', color: C.t58 }}>{t('아직 수정 이력이 없습니다.')}</div>
         ) : (
           <div style={{ display: 'flex', flexDirection: 'column', gap: '10px', maxHeight: '240px', overflowY: 'auto' }}>
             {history.map((gh, i) => (

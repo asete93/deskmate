@@ -231,7 +231,7 @@ export function DetailModal({ title, body, onClose }) {
         <div style={{ display: 'flex', alignItems: 'center', gap: '10px', padding: '16px 22px 10px' }}>
           <span style={{ fontSize: '16px' }}>📄</span>
           <span style={{ fontSize: '15.5px', fontWeight: 700, color: C.heading, flex: 1 }}>{title}</span>
-          <span onClick={onClose} title="닫기" style={{ cursor: 'pointer', color: C.t58, fontSize: '16px', padding: '2px 6px' }}>✕</span>
+          <span onClick={onClose} title={t('닫기')} style={{ cursor: 'pointer', color: C.t58, fontSize: '16px', padding: '2px 6px' }}>✕</span>
         </div>
         <style>{MD_CSS}</style>
         <div className="md-body" style={{ overflowY: 'auto', padding: '2px 24px 24px' }} dangerouslySetInnerHTML={{ __html: marked.parse(body || '') }} />
@@ -498,12 +498,12 @@ export function TargetPill({ effTarget, targetName, setTarget }) {
   return (
     <span ref={ref} style={{ position: 'relative', flexShrink: 0 }}>
       <span onClick={() => setOpen(o => !o)}
-        title={effTarget === 'main' ? '클릭해서 전송 대상 선택' : `@이름 없이 보내도 ${targetName}에게 갑니다 — 클릭해서 변경`}
+        title={effTarget === 'main' ? t('클릭해서 전송 대상 선택') : `${targetName}${t('에게 갑니다 — 클릭해서 변경')}`}
         style={{ display: 'inline-flex', alignItems: 'center', gap: '6px', cursor: 'pointer', background: effTarget === 'main' ? C.ceramic : C.mint, borderRadius: '50px', padding: '5px 12px', fontSize: '12px', fontWeight: 700, color: C.heading }}>
         <svg width="12" height="12" viewBox="0 0 24 24" fill="none" stroke="currentColor" stroke-width="2.2" stroke-linecap="round" stroke-linejoin="round" style={{ color: C.t58 }}><path d="M22 2 11 13" /><path d="M22 2 15 22l-4-9-9-4z" /></svg>
         {targetName}
         {effTarget !== 'main' && (
-          <span onClick={(e) => { e.stopPropagation(); setTarget('main'); setOpen(false); }} title="팀장에게로 되돌리기" style={{ cursor: 'pointer', fontWeight: 700, color: C.t58 }}>✕</span>
+          <span onClick={(e) => { e.stopPropagation(); setTarget('main'); setOpen(false); }} title={t('팀장에게로 되돌리기')} style={{ cursor: 'pointer', fontWeight: 700, color: C.t58 }}>✕</span>
         )}
         <svg width="10" height="10" viewBox="0 0 24 24" fill="none" stroke="currentColor" stroke-width="2.4" stroke-linecap="round" stroke-linejoin="round" style={{ color: C.t58 }}><path d="m18 15-6-6-6 6" /></svg>
       </span>
@@ -754,7 +754,7 @@ export function ThreadSwitcher({ current, onPick, light = false }) {
     : { background: 'rgba(255,255,255,0.12)', color: '#fff' };
   return (
     <span ref={ref} style={{ position: 'relative' }}>
-      <span onClick={() => setOpen(o => !o)} title="채팅방 — 방마다 대화 기억이 독립됩니다"
+      <span onClick={() => setOpen(o => !o)} title={t('채팅방 — 방마다 대화 기억이 독립됩니다')}
         style={{ display: 'inline-flex', alignItems: 'center', gap: '6px', cursor: 'pointer', borderRadius: '50px', padding: '5px 13px', fontSize: '12.5px', fontWeight: 700, whiteSpace: 'nowrap', ...pillStyle }}>
         <svg width="12" height="12" viewBox="0 0 24 24" fill="none" stroke="currentColor" stroke-width="2" stroke-linecap="round" stroke-linejoin="round"><path d="M21 15a2 2 0 0 1-2 2H7l-4 4V5a2 2 0 0 1 2-2h14a2 2 0 0 1 2 2z" /></svg>
         {cur?.title || (isEn() ? 'Main chat' : '메인 채팅')}
@@ -1027,7 +1027,7 @@ export function ChatInput({ channel, target = null, placeholder, inCard = false,
             <span key={i} style={{ position: 'relative', display: 'inline-flex' }}>
               <img src={previewUrl(f)} alt={f.name} onClick={() => setZoom(previewUrl(f))}
                 style={{ width: '54px', height: '54px', objectFit: 'cover', borderRadius: '10px', border: `1px solid ${C.line}`, cursor: 'zoom-in', display: 'block' }} />
-              <span onClick={() => setFiles(files.filter((_, j) => j !== i))} title="첨부 제거"
+              <span onClick={() => setFiles(files.filter((_, j) => j !== i))} title={t('첨부 제거')}
                 style={{ position: 'absolute', top: '-6px', right: '-6px', width: '17px', height: '17px', borderRadius: '50%', background: C.dark, color: '#fff', fontSize: '10px', display: 'flex', alignItems: 'center', justifyContent: 'center', cursor: 'pointer', boxShadow: '0 1px 3px rgba(0,0,0,0.3)' }}>✕</span>
             </span>
           ) : (
@@ -1164,8 +1164,8 @@ export function ChatScreen({ openGoal, param }) {
         <span onClick={() => setClearOpen(true)} title={isEn() ? 'Clear conversation' : '대화 초기화'} style={iconBtn(false)}>
           <svg width="15" height="15" viewBox="0 0 24 24" fill="none" stroke="currentColor" stroke-width="2" stroke-linecap="round" stroke-linejoin="round"><path d="M3 12a9 9 0 1 0 9-9 9.75 9.75 0 0 0-6.74 2.74L3 8" /><path d="M3 3v5h5" /></svg>
         </span>
-        <span data-cfg-toggle onClick={() => setCfgOpen(!cfgOpen)} title="팀장 설정 (모드·모델·effort·이름)" style={iconBtn(cfgOpen)}>{I.settings(15)}</span>
-        <span onClick={openGoal} title="목표 수정" style={iconBtn(false)}>{I.target(15)}</span>
+        <span data-cfg-toggle onClick={() => setCfgOpen(!cfgOpen)} title={t('팀장 설정 (모드·모델·effort·이름)')} style={iconBtn(cfgOpen)}>{I.settings(15)}</span>
+        <span onClick={openGoal} title={t('목표 수정')} style={iconBtn(false)}>{I.target(15)}</span>
       </div>
     </div>
   );
