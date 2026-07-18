@@ -231,6 +231,14 @@ export function ReviewScreen({ param }) {
           {isEn() ? 'External URL — pin annotations unavailable; use the summary comment below.' : '외부 URL이라 핀 주석은 불가합니다 — 아래 종합 코멘트를 사용하세요.'}
         </div>
       )}
+      {!done && interactive && (
+        <div style={{ display: 'flex', alignItems: 'center', gap: '8px', background: C.goldLight, border: `1px solid ${C.goldBorder}`, borderRadius: '10px', padding: '8px 14px', fontSize: '12.5px', color: C.goldText, fontWeight: 600, flexWrap: 'wrap' }}>
+          <span>💡</span>
+          {isEn()
+            ? <span><b>Right-click</b> an element to drop a pin comment · <b>left-click</b> works normally (links, tabs) · in ✏️ mode, click text to edit it in place</span>
+            : <span><b>우클릭</b> = 핀 코멘트 꽂기 · <b>좌클릭</b> = 원래 동작(링크·탭) · ✏️ 모드에서 텍스트 클릭 = 그 자리에서 직접 수정</span>}
+        </div>
+      )}
       <div style={{ display: 'flex', gap: '14px', flex: 1, minHeight: 0 }}>
         {/* 산출물 */}
         <div ref={frameWrapRef} style={{ flex: 1, minWidth: 0, ...card({ padding: 0, overflow: 'hidden' }) }}>
