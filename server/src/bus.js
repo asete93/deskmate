@@ -35,6 +35,7 @@ export function createBus(db) {
         show_git_menu: db.getSetting('show_git_menu', false),
         terminal_enabled: db.getSetting('terminal_enabled', false),
         files_enabled: db.getSetting('files_enabled', false),
+        auth: { enabled: db.getSetting('auth_enabled', false), has_password: !!db.getSetting('auth_hash', null) },
       });
     },
     toast(text) { broadcast('toast', { text }); },

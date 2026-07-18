@@ -3,7 +3,7 @@ import { api, wsUrl } from './api.js';
 // 전역 스토어: 스냅샷(GET /api/state) + WS 증분. 구독자는 변경 시 재렌더.
 const listeners = new Set();
 export function subscribe(fn) { listeners.add(fn); return () => listeners.delete(fn); }
-function emit() { for (const fn of listeners) fn(); }
+export function emit() { for (const fn of listeners) fn(); }
 
 export const store = {
   ready: false,
@@ -149,7 +149,7 @@ export function connectWs() {
         if (store.allChat) store.allChat = store.allChat.filter(m => m.channel !== payload.channel);
       }
     } else if (type === 'settings') {
-      Object.assign(store, { goal: payload.goal, goal_history: payload.goal_history || store.goal_history, mode: payload.mode, lang: payload.lang || store.lang, progress: payload.progress, notif_channels: payload.notif_channels, nav_order: payload.nav_order ?? store.nav_order, show_git_menu: payload.show_git_menu === true, terminal_enabled: !!payload.terminal_enabled, files_enabled: payload.files_enabled === true });
+      Object.assign(store, { goal: payload.goal, goal_history: payload.goal_history || store.goal_history, mode: payload.mode, lang: payload.lang || store.lang, progress: payload.progress, notif_channels: payload.notif_channels, nav_order: payload.nav_order ?? store.nav_order, show_git_menu: payload.show_git_menu === true, terminal_enabled: !!payload.terminal_enabled, files_enabled: payload.files_enabled === true, ...(payload.auth ? { auth: payload.auth } : {}) });
     } else if (type === 'claude_md') {
       store.claude_md = payload.content;
     } else if (type === 'rate_limit') {

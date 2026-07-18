@@ -1251,7 +1251,7 @@ export function ChatScreen({ openGoal, param }) {
               <Btn variant="outline" small onClick={() => { setMdDraft(store.claude_md); setMdEditing(true); }}>{t('수정')}</Btn>
             ) : (
               <>
-                <Btn variant="darkOutline" small onClick={() => setMdEditing(false)}>취소</Btn>
+                <Btn variant="darkOutline" small onClick={() => setMdEditing(false)}>{t('취소')}</Btn>
                 <Btn variant="primary" small onClick={saveMd}>{t('저장')}</Btn>
               </>
             )}

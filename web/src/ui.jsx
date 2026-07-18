@@ -122,6 +122,20 @@ export function Btn({ variant = 'primary', onClick, children, style = {}, small,
   }, children);
 }
 
+// 비동기 액션 버튼 — onClick(promise) 진행 동안 자동 스피너+비활성 (느린 작업 피드백 공통화)
+export function ABtn({ onClick, children, ...rest }) {
+  const [busy, setBusy] = useState(false);
+  return h(Btn, {
+    ...rest,
+    disabled: rest.disabled || busy,
+    onClick: async (e) => {
+      if (busy) return;
+      setBusy(true);
+      try { await onClick?.(e); } finally { setBusy(false); }
+    },
+  }, busy ? h(Spin, { color: rest.variant === 'primary' || rest.variant === 'black' ? '#fff' : undefined, track: 'rgba(127,127,127,0.3)' }) : null, busy ? ' ' : null, children);
+}
+
 // 세그먼트 선택 필 (MODE/MODEL/EFFORT 등)
 export function SegPill({ active, onClick, children, small }) {
   return (

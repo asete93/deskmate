@@ -60,7 +60,7 @@ are enforced by a separate immutable constitution and cannot be changed here.
   if (gitOk) {
     try {
       git('add', '-A');
-      git(...as('팀장'), 'commit', '-q', '-m', 'chore: 워크스페이스 초기화');
+      git(...as(lang === 'en' ? 'TeamLead' : '팀장'), 'commit', '-q', '-m', lang === 'en' ? 'chore: initialize workspace' : 'chore: 워크스페이스 초기화');
     } catch { /* git 실패해도 워크스페이스 파일은 유효 */ }
   } else {
     console.warn('[claude-control] git 미설치 — 워크스페이스를 git 없이 시드합니다 (Git 메뉴 비활성)');

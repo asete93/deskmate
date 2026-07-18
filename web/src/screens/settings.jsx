@@ -3,7 +3,7 @@ import { useState } from 'preact/hooks';
 import { store, showToast } from '../store.js';
 import { api, getServices, saveServices, currentBase, setCurrentBase } from '../api.js';
 import { useEffect } from 'preact/hooks';
-import { C, card, label12, Btn, Chip, Input, dotStyle, Modal, SegPill, fmtDateTime } from '../ui.jsx';
+import { C, card, label12, Btn, ABtn, Chip, Input, dotStyle, Modal, SegPill, fmtDateTime } from '../ui.jsx';
 import { t, isEn } from '../i18n.js';
 
 // 예약 작업 — 지정 시각/주기에 팀장(또는 특정 팀원)에게 요청을 자동 전송
@@ -249,8 +249,8 @@ export function SettingsScreen() {
                       <input value={nameDraft} onInput={e => setNameDraft(e.target.value)}
                         onKeyDown={e => { if (e.key === 'Enter') saveName(sv.url); }}
                         style={{ flex: 1, minWidth: 0, border: `1px solid ${C.cta}`, borderRadius: '4px', padding: '6px 10px', fontSize: '13.5px', outline: 'none' }} autoFocus />
-                      <Btn variant="primary" small onClick={() => saveName(sv.url)}>저장</Btn>
-                      <Btn variant="darkOutline" small onClick={() => setEditUrl(null)}>취소</Btn>
+                      <Btn variant="primary" small onClick={() => saveName(sv.url)}>{t('저장')}</Btn>
+                      <Btn variant="darkOutline" small onClick={() => setEditUrl(null)}>{t('취소')}</Btn>
                     </div>
                   ) : (
                     <div style={{ fontSize: '14px', fontWeight: 600 }}>{sv.name}</div>
@@ -348,13 +348,13 @@ export function SettingsScreen() {
               {t('팀장(모든 방)·팀원 전원의 세션 기억만 리셋합니다. 대화 기록·티켓·결재·워크스페이스 파일은 유지되고, 대기 중인 질문 카드는 취소됩니다.')}
             </div>
           </div>
-          <Btn variant="danger" onClick={() => {
+          <ABtn variant="danger" onClick={async () => {
             if (confirm(isEn()
               ? 'Reset ALL agent memory?\nChat history/tickets/files are kept; every Team Lead room session and all member sessions start fresh.'
               : '팀장·팀원의 기억을 모두 초기화할까요?\n대화 기록·티켓·파일은 유지되지만, 모든 세션이 백지에서 다시 시작합니다.')) {
-              api.post('/reset-memory').catch(e => showToast(e.message));
+              await api.post('/reset-memory').catch(e => showToast(e.message));
             }
-          }}>{t('기억 초기화')}</Btn>
+          }}>{t('기억 초기화')}</ABtn>
         </div>
         <div style={{ display: 'flex', alignItems: 'center', gap: '12px', marginTop: '16px', flexWrap: 'wrap', borderTop: `1px solid ${C.line}`, paddingTop: '16px' }}>
           <div style={{ flex: 1, minWidth: '220px' }}>
@@ -380,11 +380,11 @@ export function SettingsScreen() {
             <li>워크스페이스 파일과 Git 이력 전체</li>
           </ul>
           <div style={{ fontSize: '13px', color: C.danger, fontWeight: 600, marginTop: '10px' }}>복구할 수 없습니다.</div>
-          <div style={{ fontSize: '12.5px', color: C.t58, marginTop: '14px', marginBottom: '6px' }}>계속하려면 <b>초기화</b>라고 입력하세요.</div>
-          <Input value={resetText} onInput={e => setResetText(e.target.value)} placeholder="초기화" />
+          <div style={{ fontSize: '12.5px', color: C.t58, marginTop: '14px', marginBottom: '6px' }}>{isEn() ? <>Type <b>RESET</b> to continue.</> : <>계속하려면 <b>초기화</b>라고 입력하세요.</>}</div>
+          <Input value={resetText} onInput={e => setResetText(e.target.value)} placeholder={isEn() ? "RESET" : "초기화"} />
           <div style={{ display: 'flex', gap: '10px', justifyContent: 'flex-end', marginTop: '18px' }}>
-            <Btn variant="darkOutline" onClick={() => setResetOpen(false)}>취소</Btn>
-            <Btn variant="black" style={{ background: C.danger }} onClick={() => { if (resetText.trim() === '초기화') { setResetOpen(false); doReset(); } else showToast('"초기화"를 정확히 입력해주세요.'); }}>영구 삭제</Btn>
+            <Btn variant="darkOutline" onClick={() => setResetOpen(false)}>{t('취소')}</Btn>
+            <Btn variant="black" style={{ background: C.danger }} onClick={() => { if (resetText.trim() === (isEn() ? 'RESET' : '초기화')) { setResetOpen(false); doReset(); } else showToast(isEn() ? 'Type RESET exactly to continue.' : '"초기화"를 정확히 입력해주세요.'); }}>{isEn() ? 'Delete permanently' : '영구 삭제'}</Btn>
           </div>
         </Modal>
       )}

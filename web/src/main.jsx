@@ -1,6 +1,6 @@
 import { h, render, Fragment } from 'preact';
 import { useEffect, useState, useReducer } from 'preact/hooks';
-import { store, subscribe, loadSnapshot, loadModels, loadUsage, loadAllChat, connectWs, showToast, unreadCount, markRead } from './store.js';
+import { store, subscribe, loadSnapshot, loadModels, loadUsage, loadAllChat, connectWs, showToast, unreadCount, markRead, emit as emitStore } from './store.js';
 import { t, isEn } from './i18n.js';
 import { api, ensureSelfRegistered, getServices, saveServices, currentBase, setCurrentBase, setAuthToken } from './api.js';
 import { C, Btn, Modal, Input, dotStyle, modelLabel, card, fmtDateTime, SegPill, providerModelOptions, providerEffortOptions } from './ui.jsx';
@@ -446,6 +446,10 @@ export function ExternalAiModal({ onClose }) {
 
 // 로그인 게이트 — 단일 계정(비밀번호만). 분실 시 서버 로컬에서 reset-password 파일로 초기화.
 function LoginGate() {
+  // 로그인 전에는 /state를 못 읽어 언어를 모름 — 공개 라우트인 auth-status에서 lang을 받아 반영
+  useEffect(() => {
+    api.get('/auth-status').then(r => { if (r.lang && store.lang !== r.lang) { store.lang = r.lang; emitStore(); } }).catch(() => {});
+  }, []);
   const [pw, setPw] = useState('');
   const [err, setErr] = useState('');
   const [busy, setBusy] = useState(false);

@@ -3,6 +3,9 @@ import { store } from './store.js';
 // 다국어 — 키는 한국어 원문. 사전에 없는 문자열은 한국어 그대로(폴백).
 // 서버 설정 lang('ko'|'en')이 UI와 에이전트 지침(응답 언어)을 함께 전환한다.
 const EN = {
+  '스펙 내보내기 (JSON)': 'Export spec (JSON)',
+  '이 직원의 역할·모델·지침을 파일로 저장해 공유할 수 있습니다.': "Save this member's role, model and instructions as a shareable file.",
+
   // 툴팁·목표·고용 모달
   '닫기': 'Close',
   'Claude 사용량 모니터': 'Claude usage monitor',

@@ -78,6 +78,25 @@ export function CfgPanel({ agent, small }) {
             <SegPill key={ef} small={small} active={agent.effort === ef} onClick={() => setCfgPill(`e:${ef}`, { effort: ef })}>{pillBusy === `e:${ef}` ? <Spin /> : null} {ef}</SegPill>)}
         </div>
       </div>
+      <div style={{ borderTop: `1px solid ${C.line}`, paddingTop: '10px', display: 'flex', alignItems: 'center', gap: '8px', flexWrap: 'wrap' }}>
+        <Btn variant="darkOutline" small onClick={() => {
+          // 직원 스펙 내보내기 — 이름·역할·모델·지침을 JSON으로 (다른 인스턴스/사용자와 공유용)
+          const spec = {
+            schema: 'deskmate-member@1',
+            name: agent.name, role: agent.role || '',
+            model: agent.model, effort: agent.effort,
+            avatar: agent.avatar || '', prompt: agent.prompt || '',
+            ...(agent.provider ? { provider: agent.provider } : {}),
+            exported_at: new Date().toISOString(),
+          };
+          const a = document.createElement('a');
+          a.href = URL.createObjectURL(new Blob([JSON.stringify(spec, null, 2)], { type: 'application/json' }));
+          a.download = `deskmate-member-${agent.name}.json`;
+          document.body.appendChild(a); a.click(); document.body.removeChild(a);
+          URL.revokeObjectURL(a.href);
+        }}>{t('스펙 내보내기 (JSON)')}</Btn>
+        <span style={{ fontSize: '11.5px', color: C.t58 }}>{t('이 직원의 역할·모델·지침을 파일로 저장해 공유할 수 있습니다.')}</span>
+      </div>
     </div>
   );
 }
