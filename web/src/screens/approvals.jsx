@@ -125,7 +125,7 @@ export function ApprovalsScreen() {
         history.length === 0
           ? (
             <section style={card({ padding: '40px', textAlign: 'center' })}>
-              <div style={{ fontSize: '16px', fontWeight: 600, color: C.heading }}>결재 이력이 없습니다</div>
+              <div style={{ fontSize: '16px', fontWeight: 600, color: C.heading }}>{t('결재 이력이 없습니다')}</div>
             </section>
           )
           : <section style={card({ padding: '4px 0' })}>{[...history].reverse().map(ap => <HistoryRow key={ap.id} ap={ap} />)}</section>

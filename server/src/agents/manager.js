@@ -299,9 +299,27 @@ export function createManager({ db, bus, notify, workDir, uploadsDir, driverKind
   }
 
   // 언어 변경 — UI + 에이전트 지침(응답 언어 포함) 모두 전환
+  const DEFAULT_NAMES = {
+    leadName: { ko: '팀장', en: 'TeamLead' },
+    leadRole: { ko: '계획 수립 · 산출물 검증 · 의도 파악', en: 'Planning · verification · intent analysis' },
+    mainRoom: { ko: '메인 채팅', en: 'Main Chat' },
+  };
   function setLang(lang) {
     if (!['ko', 'en'].includes(lang)) throw new Error('unsupported language');
+    const prev = db.getSetting('lang', 'ko');
     db.setSetting('lang', lang);
+    // 기본 시드명 자동 마이그레이션 — 사용자가 바꾼 커스텀 이름은 건드리지 않는다
+    if (prev !== lang) {
+      const main = db.getMainAgent?.() || db.listAgents().find(a => a.kind === 'main');
+      if (main) {
+        const patch = {};
+        if (main.name === DEFAULT_NAMES.leadName[prev]) patch.name = DEFAULT_NAMES.leadName[lang];
+        if (main.role === DEFAULT_NAMES.leadRole[prev]) patch.role = DEFAULT_NAMES.leadRole[lang];
+        if (Object.keys(patch).length) { db.updateAgent(main.id, patch); bus.agents(); }
+      }
+      const th = db.getThread('main');
+      if (th && th.title === DEFAULT_NAMES.mainRoom[prev]) { db.updateThread('main', { title: DEFAULT_NAMES.mainRoom[lang] }); bus.threads?.(); }
+    }
     bus.settings();
     driver.onLangChanged?.();
     bus.event('User', 'user', lang === 'en' ? 'Language changed — English' : '언어 변경 — 한국어');

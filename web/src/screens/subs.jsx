@@ -29,34 +29,34 @@ export function CfgPanel({ agent, small }) {
         <div style={{ fontSize: '11px', fontWeight: 600, letterSpacing: '0.08em', color: C.t58, marginBottom: '6px' }}>NAME</div>
         <div style={{ display: 'flex', gap: '6px' }}>
           <input value={nameDraft ?? agent.name} onInput={e => setNameDraft(e.target.value)} style={inputStyle} />
-          <Btn variant="outline" small onClick={() => { if (nameDraft && nameDraft !== agent.name) setCfg({ name: nameDraft }); }}>변경</Btn>
+          <Btn variant="outline" small onClick={() => { if (nameDraft && nameDraft !== agent.name) setCfg({ name: nameDraft }); }}>{t('변경')}</Btn>
         </div>
-        <div style={{ fontSize: '11.5px', color: C.t58, marginTop: '4px' }}>"@이름 요청내용"으로 이 팀원을 직접 부를 수 있습니다.</div>
+        <div style={{ fontSize: '11.5px', color: C.t58, marginTop: '4px' }}>{t('"@이름 요청내용"으로 이 팀원을 직접 부를 수 있습니다.')}</div>
       </div>
       <div>
-        <div style={{ fontSize: '11px', fontWeight: 600, letterSpacing: '0.08em', color: C.t58, marginBottom: '6px' }}>아바타 (1~4자 · 이모지 가능)</div>
+        <div style={{ fontSize: '11px', fontWeight: 600, letterSpacing: '0.08em', color: C.t58, marginBottom: '6px' }}>{t('아바타 (1~4자 · 이모지 가능)')}</div>
         <div style={{ display: 'flex', gap: '6px', alignItems: 'center' }}>
           <input value={avatarDraft ?? (agent.avatar || '')} maxLength={4} onInput={e => setAvatarDraft(e.target.value)} placeholder={agent.name.slice(0, 2)} style={{ ...inputStyle, flex: 'none', width: '90px', textAlign: 'center' }} />
-          <Btn variant="outline" small onClick={() => { if (avatarDraft != null) setCfg({ avatar: avatarDraft.trim() }); }}>변경</Btn>
-          <span style={{ fontSize: '11.5px', color: C.t58 }}>채팅 발신자 아이콘에 표시 — 비우면 이름 앞 2자</span>
+          <Btn variant="outline" small onClick={() => { if (avatarDraft != null) setCfg({ avatar: avatarDraft.trim() }); }}>{t('변경')}</Btn>
+          <span style={{ fontSize: '11.5px', color: C.t58 }}>{t('채팅 발신자 아이콘에 표시 — 비우면 이름 앞 2자')}</span>
         </div>
       </div>
       <div>
         <div style={{ fontSize: '11px', fontWeight: 600, letterSpacing: '0.08em', color: C.t58, marginBottom: '6px' }}>ROLE</div>
         <div style={{ display: 'flex', gap: '6px', alignItems: 'flex-start' }}>
-          <textarea value={roleDraft ?? agent.role} rows={3} onInput={e => setRoleDraft(e.target.value)} placeholder="예: 코드 구현"
+          <textarea value={roleDraft ?? agent.role} rows={3} onInput={e => setRoleDraft(e.target.value)} placeholder={t("예: 코드 구현")}
             style={{ ...inputStyle, fontFamily: 'inherit', lineHeight: 1.5, resize: 'vertical' }} />
-          <Btn variant="outline" small onClick={() => { if (roleDraft != null && roleDraft !== agent.role) setCfg({ role: roleDraft.trim() }); }}>변경</Btn>
+          <Btn variant="outline" small onClick={() => { if (roleDraft != null && roleDraft !== agent.role) setCfg({ role: roleDraft.trim() }); }}>{t('변경')}</Btn>
         </div>
       </div>
       <div>
-        <div style={{ fontSize: '11px', fontWeight: 600, letterSpacing: '0.08em', color: C.t58, marginBottom: '6px' }}>커스텀 지침 (이 팀원에게만 추가 적용)</div>
+        <div style={{ fontSize: '11px', fontWeight: 600, letterSpacing: '0.08em', color: C.t58, marginBottom: '6px' }}>{t('커스텀 지침 (이 팀원에게만 추가 적용)')}</div>
         <textarea value={promptDraft ?? (agent.prompt || '')} onInput={e => setPromptDraft(e.target.value)} rows={3}
-          placeholder="예: 모든 코드에 JSDoc을 붙여라. 테스트는 vitest만 사용."
+          placeholder={t("예: 모든 코드에 JSDoc을 붙여라. 테스트는 vitest만 사용.")}
           style={{ width: '100%', border: `1px solid ${C.border}`, borderRadius: '4px', padding: '8px 10px', fontSize: '12.5px', lineHeight: 1.5, outlineColor: C.cta, resize: 'vertical' }} />
         <div style={{ display: 'flex', gap: '6px', marginTop: '6px', alignItems: 'center' }}>
-          <Btn variant="outline" small onClick={() => { if (promptDraft != null && promptDraft !== (agent.prompt || '')) { setCfg({ prompt: promptDraft }); showToast('저장됨 — 다음 메시지부터 적용됩니다.'); } }}>지침 저장</Btn>
-          <Btn variant="darkOutline" small onClick={toggleFullPrompt}>{fullPrompt != null ? '적용 프롬프트 닫기' : '적용 프롬프트 보기'}</Btn>
+          <Btn variant="outline" small onClick={() => { if (promptDraft != null && promptDraft !== (agent.prompt || '')) { setCfg({ prompt: promptDraft }); showToast(t('저장됨 — 다음 메시지부터 적용됩니다.')); } }}>{t('지침 저장')}</Btn>
+          <Btn variant="darkOutline" small onClick={toggleFullPrompt}>{fullPrompt != null ? t('적용 프롬프트 닫기') : t('적용 프롬프트 보기')}</Btn>
         </div>
         {fullPrompt != null && (
           <pre style={{ margin: '8px 0 0', background: C.goldLight, border: `1px solid ${C.goldBorder}`, borderRadius: '8px', padding: '12px', fontFamily: "ui-monospace,'SF Mono',Menlo,monospace", fontSize: '11.5px', lineHeight: 1.6, whiteSpace: 'pre-wrap', maxHeight: '260px', overflowY: 'auto', color: C.t87 }}>{fullPrompt}</pre>

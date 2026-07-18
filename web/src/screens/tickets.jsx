@@ -95,7 +95,7 @@ export function TicketsScreen() {
         <div style={card({ overflowX: 'auto' })}>
           <div style={{ minWidth: '780px' }}>
             <div style={{ display: 'grid', gridTemplateColumns: '88px 1fr 112px 108px 64px 200px', gap: '8px', padding: '13px 20px', borderBottom: `1px solid ${C.line}`, fontSize: '11px', fontWeight: 600, letterSpacing: '0.08em', color: C.t58 }}>
-              <span>ID</span><span>제목</span><span>상태</span><span>담당</span><span>우선순위</span><span>최근 업데이트</span>
+              <span>ID</span><span>{t('제목')}</span><span>{t('상태')}</span><span>{t('담당')}</span><span>{t('우선순위')}</span><span>{t('최근 업데이트')}</span>
             </div>
             {[...store.tickets].sort((a, b) => ORDER[a.status] - ORDER[b.status] || a.id - b.id).map(tr => {
               const st = TICKET_STATUS[tr.status];

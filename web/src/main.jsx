@@ -339,7 +339,7 @@ export function GoalModal({ onClose }) {
       <textarea value={draft} onInput={e => setDraft(e.target.value)} rows={4}
         style={{ width: '100%', marginTop: '16px', border: `1px solid ${C.border}`, borderRadius: '8px', padding: '14px', fontSize: '14.5px', lineHeight: 1.6, outlineColor: C.cta, resize: 'vertical' }} />
       <div style={{ display: 'flex', gap: '10px', justifyContent: 'flex-end', marginTop: '16px' }}>
-        <Btn variant="darkOutline" onClick={onClose}>취소</Btn>
+        <Btn variant="darkOutline" onClick={onClose}>{t('취소')}</Btn>
         <Btn variant="primary" onClick={save}>저장</Btn>
       </div>
 
@@ -390,19 +390,19 @@ export function ExternalAiModal({ onClose }) {
     if (!efs.includes(effort)) setEffort(efs.includes('medium') ? 'medium' : efs[0]);
   };
   const connect = async () => {
-    if (!name.trim()) { showToast('에이전트 이름을 입력하세요.'); return; }
+    if (!name.trim()) { showToast(t('에이전트 이름을 입력하세요.')); return; }
     await api.post('/agents', { provider: prov, name: name.trim(), role: role.trim(), model, effort });
     onClose();
   };
   const lbl = { fontSize: '11px', fontWeight: 600, letterSpacing: '0.08em', color: C.t58 };
   return (
     <Modal onClose={onClose} maxWidth="520px">
-      <div style={{ fontSize: '18px', fontWeight: 600, color: C.heading }}>외부 AI 팀원 연동</div>
-      <div style={{ fontSize: '13px', color: C.t58, marginTop: '4px' }}>연동된 AI는 팀장의 지휘 아래 팀원으로 동작합니다.</div>
+      <div style={{ fontSize: '18px', fontWeight: 600, color: C.heading }}>{t('외부 AI 팀원 연동')}</div>
+      <div style={{ fontSize: '13px', color: C.t58, marginTop: '4px' }}>{t('연동된 AI는 팀장의 지휘 아래 팀원으로 동작합니다.')}</div>
       {noCodex && (
         <div style={{ marginTop: '10px', background: C.goldLight, border: `1px solid ${C.goldBorder}`, borderRadius: '10px', padding: '10px 14px', fontSize: '12.5px', lineHeight: 1.6, color: C.goldText, fontWeight: 600 }}>
-          ⚠ 서버에 Codex CLI가 설치되어 있지 않습니다. 연동은 등록되지만 실제 응답은 설치 후부터 동작합니다.<br />
-          설치: <code style={{ background: '#fff', borderRadius: '4px', padding: '1px 6px' }}>npm i -g @openai/codex</code> 후 <code style={{ background: '#fff', borderRadius: '4px', padding: '1px 6px' }}>codex login</code>
+          {t('⚠ 서버에 Codex CLI가 설치되어 있지 않습니다. 연동은 등록되지만 실제 응답은 설치 후부터 동작합니다.')}<br />
+          {t('설치')}: <code style={{ background: '#fff', borderRadius: '4px', padding: '1px 6px' }}>npm i -g @openai/codex</code> 후 <code style={{ background: '#fff', borderRadius: '4px', padding: '1px 6px' }}>codex login</code>
         </div>
       )}
       <div style={{ ...lbl, margin: '18px 0 8px' }}>PROVIDER</div>
@@ -433,12 +433,12 @@ export function ExternalAiModal({ onClose }) {
         ))}
       </div>
       <div style={{ ...lbl, margin: '16px 0 6px' }}>AGENT NAME</div>
-      <Input value={name} onInput={e => setName(e.target.value)} placeholder="예: Codex-Reviewer" />
+      <Input value={name} onInput={e => setName(e.target.value)} placeholder={t("예: Codex-Reviewer")} />
       <div style={{ ...lbl, margin: '14px 0 6px' }}>ROLE</div>
-      <Input value={role} onInput={e => setRole(e.target.value)} placeholder="예: 코드 리뷰 · 보조 구현" />
+      <Input value={role} onInput={e => setRole(e.target.value)} placeholder={t("예: 코드 리뷰 · 보조 구현")} />
       <div style={{ display: 'flex', gap: '10px', justifyContent: 'flex-end', marginTop: '20px' }}>
-        <Btn variant="darkOutline" onClick={onClose}>취소</Btn>
-        <Btn variant="primary" onClick={connect}>연동</Btn>
+        <Btn variant="darkOutline" onClick={onClose}>{t('취소')}</Btn>
+        <Btn variant="primary" onClick={connect}>{t('연동하기')}</Btn>
       </div>
     </Modal>
   );

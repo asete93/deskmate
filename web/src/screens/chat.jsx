@@ -1177,12 +1177,12 @@ export function ChatScreen({ openGoal, param }) {
           <div style={{ width: '100%' }}>
             <div style={{ fontSize: '11px', fontWeight: 600, letterSpacing: '0.08em', color: C.t58, marginBottom: '8px' }}>NAME</div>
             <div style={{ display: 'flex', gap: '8px', maxWidth: '340px' }}>
-              <Input value={nameDraft ?? main.name ?? ''} onInput={e => setNameDraft(e.target.value)} placeholder="팀장 이름" style={{ flex: 1, width: 'auto', padding: '8px 12px' }} />
-              <Btn variant="outline" small onClick={() => { if (nameDraft && nameDraft !== main.name) setCfg({ name: nameDraft }); }}>변경</Btn>
+              <Input value={nameDraft ?? main.name ?? ''} onInput={e => setNameDraft(e.target.value)} placeholder={t("팀장 이름")} style={{ flex: 1, width: 'auto', padding: '8px 12px' }} />
+              <Btn variant="outline" small onClick={() => { if (nameDraft && nameDraft !== main.name) setCfg({ name: nameDraft }); }}>{t('변경')}</Btn>
               <Input value={avatarDraft ?? (main.avatar || '')} maxLength={4} onInput={e => setAvatarDraft(e.target.value)} placeholder={isEn() ? 'Avatar' : '아바타'} style={{ width: '76px', flex: 'none', padding: '8px 10px', textAlign: 'center' }} />
               <Btn variant="outline" small onClick={() => { if (avatarDraft != null) setCfg({ avatar: avatarDraft.trim() }); }}>{isEn() ? 'Avatar' : '아바타'}</Btn>
             </div>
-            <div style={{ fontSize: '12px', color: C.t58, marginTop: '6px' }}>이름을 정하면 채팅에서 "@{nameDraft || main.name || '이름'} 요청내용"으로 부를 수 있습니다.</div>
+            <div style={{ fontSize: '12px', color: C.t58, marginTop: '6px' }}>{t('이름을 정하면 채팅에서')} "@{nameDraft || main.name}" {t('으로 부를 수 있습니다.')}</div>
           </div>
           <div style={{ width: '100%' }}>
             <div style={{ fontSize: '11px', fontWeight: 600, letterSpacing: '0.08em', color: C.t58, marginBottom: '8px' }}>MODE</div>
