@@ -507,12 +507,35 @@ export function createSdkDriver(ctx) {
       entry.replyTo = 'Main'; // 팀장 위임 턴 — 보고 수신자는 팀장
       entry.replyChannel = room; // 위임 대화는 발원한 방에 게시
       entry.pendingText = text;
-    }, db.getSetting('lang', 'ko') === 'ko' ? `${text}\n\n[시스템: 역할상 다른 언어가 필요한 경우가 아니면 한국어로 보고하라]` : text);
+    }, db.getSetting('lang', 'ko') === 'ko'
+      ? `${text}\n\n[시스템: 역할상 다른 언어가 필요한 경우가 아니면 한국어로 보고하라]`
+      : `${text}\n\n[System: unless your role requires another language, respond in English]`);
   }
 
   // 실제 사용 가능 모델 목록 — 일회용 세션에서 supportedModels() 조회.
   // (control request라 LLM 호출/토큰 소모 없음)
   // TTL 캐시: CLI가 새 모델을 내려주면 재기동 없이 10분 내 반영.
+  // 초경량 일회성 생성 — 커밋 메시지 등. haiku/low 고정, 툴 없음 (토큰 소모 최소)
+  async function oneShotText(prompt) {
+    const mod = await loadSdk();
+    const queue = makeQueue();
+    const q = mod.query({
+      prompt: queue,
+      options: { cwd: ctx.workDir, tools: [], disallowedTools: ['Task', 'Agent'], permissionMode: 'default', model: 'haiku', effort: 'low', maxTurns: 1 },
+    });
+    queue.push({ type: 'user', message: { role: 'user', content: prompt }, parent_tool_use_id: null });
+    queue.end();
+    let text = '';
+    for await (const msg of q) {
+      if (msg.type === 'assistant') {
+        const tt = (msg.message.content || []).filter(b => b.type === 'text').map(b => b.text).join('\n').trim();
+        if (tt) text = tt;
+      }
+      if (msg.type === 'result') break;
+    }
+    return text;
+  }
+
   let modelsCache = null, modelsCacheAt = 0;
   const MODELS_TTL = 10 * 60_000;
   async function listModels() {
@@ -549,6 +572,7 @@ export function createSdkDriver(ctx) {
 
   return {
     listModels,
+    oneShotText,
 
     init(agents) {
       // 부팅 시 세션은 게으르게(첫 메시지에) resume — 유휴 세션 유지 비용 방지
@@ -673,10 +697,8 @@ export function createSdkDriver(ctx) {
 
     // 언어 변경: 지침(systemPrompt)은 세션 시작 시 주입 → 모든 세션 재시작(resume으로 맥락 유지)
     onLangChanged() {
-      for (const [key, entry] of [...sessions.entries()]) {
-        try { entry.end(); } catch { /* already closed */ }
-        sessions.delete(key);
-      }
+      // 진행 중 턴까지 즉시 중단 — 옛 언어 지침의 세션이 계속 발화하는 것을 방지
+      for (const [, entry] of [...sessions.entries()]) killEntry(entry);
       // 외부 AI(Codex)는 첫 턴에만 지침 주입 — 세션을 리셋해 새 언어 지침 적용
       for (const a of db.listAgents()) {
         if (a.provider) db.updateAgent(a.id, { session_id: null });

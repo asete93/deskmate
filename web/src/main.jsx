@@ -41,7 +41,7 @@ function orderedNav() {
     items = order.map(k => byKey[k]).filter(Boolean);
     for (const n of NAV) if (!items.includes(n)) items.push(n);
   }
-  if (!store.show_git_menu) items = items.filter(n => n.key !== 'git');
+  if (!store.show_git_menu || store.caps?.git === false) items = items.filter(n => n.key !== 'git');
   if (!store.terminal_enabled) items = items.filter(n => n.key !== 'terminal');
   if (!store.files_enabled) items = items.filter(n => n.key !== 'files');
   return items;
@@ -91,9 +91,9 @@ function ServiceSwitcher({ mobile }) {
           <span style={dotStyle(sv.url === cur.url ? C.cta : C.border, 7)} />
           <div style={{ flex: 1, minWidth: 0 }}>
             <div style={{ fontSize: '13px', fontWeight: 600, color: C.t87, whiteSpace: 'nowrap', overflow: 'hidden', textOverflow: 'ellipsis' }}>{sv.name}</div>
-            <div style={{ fontSize: '11.5px', color: C.t58 }}>{sv.url}</div>
+            <div style={{ fontSize: '11.5px', color: C.t58, whiteSpace: 'nowrap', overflow: 'hidden', textOverflow: 'ellipsis' }}>{sv.url}</div>
           </div>
-          {sv.url === cur.url && <span style={{ fontSize: '11px', fontWeight: 700, color: C.heading }}>연결됨</span>}
+          {sv.url === cur.url && <span style={{ fontSize: '11px', fontWeight: 700, color: C.heading, flexShrink: 0 }}>연결됨</span>}
         </div>
       ))}
     </div>
@@ -145,8 +145,8 @@ function Sidebar({ screen, badges }) {
   return (
     <aside style={{ width: '236px', flexShrink: 0, background: C.dark, color: '#fff', position: 'sticky', top: 0, height: '100vh', display: 'flex', flexDirection: 'column', padding: '24px 14px', overflow: 'hidden' }}>
       <div style={{ padding: '0 14px 18px 14px', flexShrink: 0 }}>
-        <div style={{ fontSize: '12px', fontWeight: 700, letterSpacing: '0.14em', color: 'rgba(255,255,255,0.7)' }}>GREEN APRON</div>
-        <div style={{ fontSize: '18px', fontWeight: 700, color: '#fff', marginTop: '4px' }}>My AI Team</div>
+        <div style={{ fontSize: '12px', fontWeight: 700, letterSpacing: '0.14em', color: 'rgba(255,255,255,0.7)' }}>AI TEAM PLATFORM</div>
+        <div style={{ fontSize: '18px', fontWeight: 700, color: '#fff', marginTop: '4px' }}>Deskmate</div>
       </div>
       <div style={{ flexShrink: 0 }}><ServiceSwitcher /></div>
       {/* 메뉴 순서는 드래그로 변경 — 서버 저장이라 모든 접속 환경에서 유지. nav만 스크롤(짤림 방지). */}
@@ -371,6 +371,7 @@ export function GoalModal({ onClose }) {
 
 // 외부 AI 연동 모달 (서브·조직도 공용)
 export function ExternalAiModal({ onClose }) {
+  const noCodex = store.caps?.codex === false;
   const providers = [
     { key: 'openai', label: 'Codex · OpenAI', live: true },
   ];
@@ -395,6 +396,12 @@ export function ExternalAiModal({ onClose }) {
     <Modal onClose={onClose} maxWidth="520px">
       <div style={{ fontSize: '18px', fontWeight: 600, color: C.heading }}>외부 AI 팀원 연동</div>
       <div style={{ fontSize: '13px', color: C.t58, marginTop: '4px' }}>연동된 AI는 팀장의 지휘 아래 팀원으로 동작합니다.</div>
+      {noCodex && (
+        <div style={{ marginTop: '10px', background: C.goldLight, border: `1px solid ${C.goldBorder}`, borderRadius: '10px', padding: '10px 14px', fontSize: '12.5px', lineHeight: 1.6, color: C.goldText, fontWeight: 600 }}>
+          ⚠ 서버에 Codex CLI가 설치되어 있지 않습니다. 연동은 등록되지만 실제 응답은 설치 후부터 동작합니다.<br />
+          설치: <code style={{ background: '#fff', borderRadius: '4px', padding: '1px 6px' }}>npm i -g @openai/codex</code> 후 <code style={{ background: '#fff', borderRadius: '4px', padding: '1px 6px' }}>codex login</code>
+        </div>
+      )}
       <div style={{ ...lbl, margin: '18px 0 8px' }}>PROVIDER</div>
       <div style={{ display: 'flex', gap: '8px', flexWrap: 'wrap' }}>
         {providers.map(p => (
@@ -457,8 +464,8 @@ function LoginGate() {
   return (
     <div style={{ position: 'fixed', inset: 0, zIndex: 300, background: C.dark, display: 'flex', alignItems: 'center', justifyContent: 'center', padding: '20px' }}>
       <div style={{ width: 'min(400px, 100%)', background: '#fff', borderRadius: '16px', padding: '32px 28px', boxShadow: '0 20px 60px rgba(0,0,0,0.4)' }}>
-        <div style={{ fontSize: '12px', fontWeight: 700, letterSpacing: '0.14em', color: C.t58 }}>GREEN APRON</div>
-        <div style={{ fontSize: '20px', fontWeight: 700, color: C.heading, marginTop: '4px' }}>My AI Team</div>
+        <div style={{ fontSize: '12px', fontWeight: 700, letterSpacing: '0.14em', color: C.t58 }}>AI TEAM PLATFORM</div>
+        <div style={{ fontSize: '20px', fontWeight: 700, color: C.heading, marginTop: '4px' }}>Deskmate</div>
         <div style={{ fontSize: '13px', color: C.t58, marginTop: '10px' }}>{isEn() ? 'Enter the password to continue.' : '비밀번호를 입력해 주세요.'}</div>
         <input type="password" value={pw} onInput={e => setPw(e.target.value)} onKeyDown={e => { if (e.key === 'Enter') submit(); }}
           autoFocus placeholder={isEn() ? 'Password' : '비밀번호'}
@@ -564,8 +571,8 @@ function App() {
         <main style={{ flex: 1, padding: isMobile
           ? '12px 12px 80px'
           // 채팅류 화면은 하단 여백 없이 페이지 끝까지 — 대화 영역 최대화
-          : (r.screen === 'chat' || r.screen === 'requests' || r.screen === 'terminal' || r.screen === 'files' || r.screen === 'review' || (r.screen === 'subs' && r.param) ? '24px 24px 24px' : '24px 24px 120px'),
-          maxWidth: (r.screen === 'terminal' || r.screen === 'files' || r.screen === 'review') ? 'none' : '1240px', width: '100%', margin: '0 auto' }}>
+          : (r.screen === 'chat' || r.screen === 'requests' || r.screen === 'terminal' || r.screen === 'files' || r.screen === 'review' || r.screen === 'git' || (r.screen === 'subs' && r.param) ? '24px 24px 24px' : '24px 24px 120px'),
+          maxWidth: (r.screen === 'terminal' || r.screen === 'files' || r.screen === 'review' || r.screen === 'git') ? 'none' : '1240px', width: '100%', margin: '0 auto' }}>
           {store.ready ? screens[r.screen] : <div style={{ padding: '60px', textAlign: 'center', color: C.t58 }}>연결 중…</div>}
         </main>
         {isMobile && <MobileTabs screen={r.screen} badges={badges} />}

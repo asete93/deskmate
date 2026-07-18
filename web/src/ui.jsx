@@ -95,7 +95,7 @@ export function fmtDateTime(ts) {
 
 // ---- 공통 컴포넌트 ----
 // 50px pill 버튼, press scale(0.95)
-export function Btn({ variant = 'primary', onClick, children, style = {}, small }) {
+export function Btn({ variant = 'primary', onClick, children, style = {}, small, disabled = false }) {
   const [press, setPress] = useState(false);
   const base = {
     borderRadius: '50px', border: 'none', cursor: 'pointer',
@@ -112,9 +112,10 @@ export function Btn({ variant = 'primary', onClick, children, style = {}, small 
     danger: { background: '#fff', color: C.danger, border: '1px solid rgba(200,32,20,0.4)' },
   };
   return h('button', {
-    style: { ...base, ...variants[variant], ...style },
-    onClick,
-    onMouseDown: () => setPress(true),
+    style: { ...base, ...variants[variant], ...style, ...(disabled ? { opacity: 0.45, cursor: 'not-allowed', transform: 'none' } : {}) },
+    disabled,
+    onClick: disabled ? undefined : onClick,
+    onMouseDown: () => !disabled && setPress(true),
     onMouseUp: () => setPress(false),
     onMouseLeave: () => setPress(false),
   }, children);

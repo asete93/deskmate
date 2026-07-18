@@ -54,7 +54,7 @@ export const api = {
 export async function ensureSelfRegistered() {
   const list = getServices();
   if (!list.some(s => s.url === location.origin)) {
-    let name = 'Claude Control';
+    let name = 'Deskmate';
     try { name = (await api.get('/service-info')).name; } catch { /* offline */ }
     const port = new URL(location.origin).port || (location.protocol === 'https:' ? '443' : '80');
     list.push({ url: location.origin, name: `${name} · :${port}` });

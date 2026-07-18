@@ -1,9 +1,10 @@
 {
-  "name": "claude-control",
+  "name": "deskmate",
   "version": "1.0.0",
   "type": "module",
-  "description": "Claude Code 웹 제어 멀티 에이전트 오케스트레이션 대시보드 (My AI Team)",
+  "description": "Deskmate — Claude Code 멀티 에이전트 팀 오케스트레이션 대시보드",
   "bin": {
+    "deskmate": "bin/claude-control.js",
     "claude-control": "bin/claude-control.js"
   },
   "files": [

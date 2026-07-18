@@ -3,7 +3,7 @@
 export function createNotifier(db) {
   async function send(kind, text) {
     const channels = db.getSetting('notif_channels', []).filter(c => c.active);
-    const body = `[Claude Control] ${kind}: ${text}`;
+    const body = `[Deskmate] ${kind}: ${text}`;
     await Promise.allSettled(channels.map(async (ch) => {
       try {
         if (ch.type === 'discord') {

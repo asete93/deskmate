@@ -200,7 +200,7 @@ export function SettingsScreen() {
     let url;
     try { url = new URL(newSvc.trim()).origin; } catch { showToast('올바른 URL을 입력하세요.'); return; }
     if (services.some(s => s.url === url)) { showToast('이미 등록된 서비스입니다.'); return; }
-    let name = 'Claude Control';
+    let name = 'Deskmate';
     try {
       const info = await (await fetch(url + '/api/service-info')).json();
       name = info.name || name;
@@ -236,7 +236,7 @@ export function SettingsScreen() {
       {/* 서비스 연결 */}
       <section style={card({ padding: '24px' })}>
         <div style={label12}>서비스 연결</div>
-        <div style={{ fontSize: '13px', color: C.t58, marginTop: '4px' }}>동일한 Claude Control 서비스를 연결하고 사이드 패널 상단에서 전환할 수 있습니다.</div>
+        <div style={{ fontSize: '13px', color: C.t58, marginTop: '4px' }}>동일한 Deskmate 서비스를 연결하고 사이드 패널 상단에서 전환할 수 있습니다.</div>
         <div style={{ display: 'flex', flexDirection: 'column', gap: '8px', marginTop: '16px' }}>
           {services.map(sv => {
             const isCur = sv.url === currentBase();
@@ -307,8 +307,9 @@ export function SettingsScreen() {
         <div style={label12}>메뉴 표시</div>
         <div style={{ display: 'flex', alignItems: 'center', gap: '12px', marginTop: '14px', flexWrap: 'wrap' }}>
           <div style={{ flex: 1, minWidth: '200px' }}>
-            <div style={{ fontSize: '14px', fontWeight: 600 }}>Git 메뉴</div>
+            <div style={{ fontSize: '14px', fontWeight: 600 }}>Git</div>
             <div style={{ fontSize: '12.5px', color: C.t58, marginTop: '2px' }}>끄면 사이드패널에서만 숨겨지고, Git 연동·커밋 기록 등 실제 동작은 그대로 유지됩니다.</div>
+            {store.caps?.git === false && <div style={{ fontSize: '12px', color: C.danger, marginTop: '4px', fontWeight: 600 }}>⚠ 서버에 git이 설치되어 있지 않아 Git 메뉴가 비활성화됐습니다. git 설치 후 재시작하면 사용할 수 있습니다.</div>}
           </div>
           <div onClick={() => api.post('/settings/git-menu', { show: !store.show_git_menu }).catch(e => showToast(e.message))}
             style={{ width: '40px', height: '22px', borderRadius: '50px', position: 'relative', cursor: 'pointer', flexShrink: 0, transition: 'all 0.2s ease', background: store.show_git_menu ? C.cta : C.border }}>

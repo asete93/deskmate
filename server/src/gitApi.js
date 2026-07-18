@@ -1,4 +1,6 @@
 import { execFileSync } from 'node:child_process';
+import fs from 'node:fs';
+import path from 'node:path';
 
 // workspace repo에 대한 읽기 전용 git 조회 + CLAUDE.md 커밋
 export function createGitApi(workDir) {
@@ -125,5 +127,89 @@ export function createGitApi(workDir) {
     } catch { return false; /* 변경 없음 */ }
   }
 
-  return { branches, graph, commitDiff, tree, fileAt, commitFile, commitMeta };
+  // ── 워킹트리(스테이징) 작업 ──
+  const safePaths = (paths) => {
+    const arr = (Array.isArray(paths) ? paths : []).map(String).filter(p => p && !p.includes('..') && !p.startsWith('/'));
+    if (!arr.length) throw new Error('대상 파일이 없습니다');
+    return arr;
+  };
+
+  // 현재 상태: [{path, staged:'A|M|D|R|없음', unstaged:'M|D|?|없음'}]
+  function status() {
+    const out = git('status', '--porcelain=v1');
+    const files = out.split('\n').filter(Boolean).map(l => {
+      const x = l[0], y = l[1];
+      let p = l.slice(3);
+      if (x === 'R') p = p.split(' -> ').pop();
+      return { path: p, staged: (x !== ' ' && x !== '?') ? x : null, unstaged: y !== ' ' ? (x === '?' ? '?' : y) : null };
+    });
+    let branchName = '';
+    try { branchName = git('rev-parse', '--abbrev-ref', 'HEAD').trim(); } catch { /* 커밋 0개 */ }
+    return { branch: branchName, files };
+  }
+
+  // 워킹트리 파일 diff (staged=true면 index↔HEAD, 아니면 워킹트리↔index. untracked는 전체 추가로)
+  function workDiff(path, staged = false) {
+    safePaths([path]);
+    let out = '';
+    try {
+      out = staged ? git('diff', '--cached', '--', path) : git('diff', '--', path);
+    } catch { out = ''; }
+    if (!out.trim() && !staged) {
+      // untracked — 파일 전체를 추가분으로
+      try { out = git('diff', '--no-index', '--', '/dev/null', path); } catch (e) { out = e.stdout || ''; }
+    }
+    const lines = [];
+    let inHunk = false;
+    for (const line of String(out).split('\n')) {
+      if (line.startsWith('@@')) { inHunk = true; lines.push({ t: 'hunk', text: line }); continue; }
+      if (!inHunk) continue;
+      if (line.startsWith('+')) lines.push({ t: 'add', text: line.slice(1) });
+      else if (line.startsWith('-')) lines.push({ t: 'del', text: line.slice(1) });
+      else lines.push({ t: 'ctx', text: line.slice(1) });
+    }
+    return { path, staged, diff: lines.slice(0, 3000) };
+  }
+
+  function stage(paths) { git('add', '--', ...safePaths(paths)); return status(); }
+  function stageAll() { git('add', '-A'); return status(); }
+  function unstage(paths) { git('reset', 'HEAD', '--', ...safePaths(paths)); return status(); }
+
+  function readIgnore() {
+    try { return { content: fs.readFileSync(path.join(workDir, '.gitignore'), 'utf8') }; }
+    catch { return { content: '' }; }
+  }
+  function writeIgnore(content) {
+    fs.writeFileSync(path.join(workDir, '.gitignore'), String(content ?? ''));
+    return status();
+  }
+
+  // 자동 커밋 메시지 재료 — staged 요약(stat)+diff 앞부분(캡)
+  function stagedSummary() {
+    const stat = git('diff', '--cached', '--stat').trim();
+    let diff = '';
+    try { diff = git('diff', '--cached', '--unified=1'); } catch { diff = ''; }
+    return { stat, diff: diff.slice(0, 9000) };
+  }
+
+  // 휴리스틱 폴백 — LLM 불가시 규칙 기반 메시지
+  function heuristicMessage() {
+    const st = status();
+    const staged = st.files.filter(f => f.staged);
+    if (!staged.length) return 'chore: 변경사항 커밋';
+    const first = staged[0].path.split('/').pop();
+    const allNew = staged.every(f => f.staged === 'A');
+    const type = allNew ? 'feat' : staged.every(f => f.staged === 'D') ? 'chore' : 'fix';
+    return staged.length === 1 ? `${type}: ${first} ${allNew ? '추가' : '수정'}` : `${type}: ${first} 외 ${staged.length - 1}개 파일 ${allNew ? '추가' : '변경'}`;
+  }
+
+  function commitStaged(message, author = '대표') {
+    const msg = String(message || '').trim();
+    if (!msg) throw new Error('커밋 메시지를 입력하세요');
+    git('-c', `user.name=${author}`, '-c', 'user.email=control@local', 'commit', '-m', msg);
+    const sha = git('rev-parse', 'HEAD').trim();
+    return { sha: sha.slice(0, 7) };
+  }
+
+  return { branches, graph, commitDiff, tree, fileAt, commitFile, commitMeta, status, workDiff, stage, stageAll, unstage, commitStaged, readIgnore, writeIgnore, stagedSummary, heuristicMessage };
 }

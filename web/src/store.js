@@ -7,7 +7,7 @@ function emit() { for (const fn of listeners) fn(); }
 
 export const store = {
   ready: false,
-  service: { name: 'Claude Control', port: 0 },
+  service: { name: 'Deskmate', port: 0 },
   driver: 'mock',
   goal: '', goal_history: [], mode: 'plan', progress: 0,
   lang: 'ko',            // UI·에이전트 동작 언어 ('ko'|'en')
@@ -17,6 +17,7 @@ export const store = {
   show_git_menu: false,  // Git 메뉴 노출 여부 (기본 off — 설정에서 켬)
   terminal_enabled: false, // 웹 터미널 기능 on/off
   files_enabled: false,    // 파일 탐색기 on/off (기본 off)
+  caps: { git: true, codex: false }, // 서버 기능 감지 결과
   agents: [], tickets: [], approvals: [], requests: [], events: [],
   threads: [],           // 팀장 채팅방 목록 (방별 독립 세션)
   notif_channels: [],
@@ -51,6 +52,7 @@ export async function loadSnapshot() {
     show_git_menu: s.show_git_menu === true,
     terminal_enabled: !!s.terminal_enabled,
     files_enabled: s.files_enabled === true,
+    caps: s.caps || { git: true, codex: false },
     pendingCount: s.pending_interactions,
     claude_md: s.claude_md,
   });

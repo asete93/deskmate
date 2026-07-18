@@ -61,7 +61,7 @@ export function createApi({ db, bus, manager, gitApi, uploadsDir, auth, termHub,
     ok(res, { ...u, today: db.sumTokensSince(today.getTime()) });
   }));
   r.get('/service-info', (req, res) => ok(res, {
-    name: process.env.SERVICE_NAME || 'Claude Control',
+    name: process.env.SERVICE_NAME || 'Deskmate',
     port: Number(process.env.PORT || 3200),
   }));
 
@@ -278,11 +278,48 @@ export function createApi({ db, bus, manager, gitApi, uploadsDir, auth, termHub,
   r.post('/claude-md', guard((req, res) => { manager.saveClaudeMd(String(req.body.content ?? '')); ok(res); }));
 
   // ---- Git ----
+  const gitGate = (req, res, next) => { if (manager.ctx.caps && !manager.ctx.caps.git) return res.status(503).json({ error: '서버에 git이 설치되어 있지 않습니다. git 설치 후 claude-control을 재시작하세요.' }); next(); };
+  r.use('/git', gitGate);
   r.get('/git/branches', guard((req, res) => ok(res, gitApi.branches())));
   r.get('/git/graph', guard((req, res) => ok(res, gitApi.graph(req.query.branch || null))));
   r.get('/git/commit/:sha/diff', guard((req, res) => ok(res, gitApi.commitDiff(req.params.sha))));
   r.get('/git/commit/:sha/tree', guard((req, res) => ok(res, gitApi.tree(req.params.sha))));
   r.get('/git/commit/:sha/file', guard((req, res) => ok(res, gitApi.fileAt(req.params.sha, String(req.query.path || '')))));
+  // ── 워킹트리 스테이징·커밋 (대시보드에서 대표가 직접) ──
+  r.get('/git/status', guard((req, res) => ok(res, gitApi.status())));
+  r.get('/git/workdiff', guard((req, res) => ok(res, gitApi.workDiff(String(req.query.path || ''), req.query.staged === '1'))));
+  r.post('/git/stage', guard((req, res) => {
+    const out = req.body?.all ? gitApi.stageAll() : gitApi.stage(req.body?.paths);
+    bus.event('User', 'user', `git 스테이징 — ${req.body?.all ? '전체' : (req.body?.paths || []).length + '개 파일'}`);
+    ok(res, out);
+  }));
+  r.post('/git/unstage', guard((req, res) => ok(res, gitApi.unstage(req.body?.paths))));
+  r.get('/git/ignore', guard((req, res) => ok(res, gitApi.readIgnore())));
+  r.post('/git/ignore', guard((req, res) => {
+    const out = gitApi.writeIgnore(String(req.body?.content ?? ''));
+    bus.event('User', 'user', '.gitignore 수정');
+    ok(res, out);
+  }));
+  r.post('/git/suggest-commit', async (req, res) => {
+    try {
+      const { stat, diff } = gitApi.stagedSummary();
+      if (!stat) return res.status(400).json({ error: '스테이징된 변경이 없습니다' });
+      let message = '';
+      try {
+        if (manager.oneShotText) {
+          const out = await manager.oneShotText(`아래 git staged 변경을 보고 Conventional Commits 형식의 한국어 커밋 메시지 한 줄만 출력하라 (타입: feat/fix/docs/chore/refactor, 50자 이내, 다른 설명·따옴표 금지).\n\n[stat]\n${stat}\n\n[diff 일부]\n${diff}`);
+          message = String(out || '').split('\n')[0].trim().replace(/^["'\`]|["'\`]$/g, '').slice(0, 72);
+        }
+      } catch { /* LLM 실패 — 휴리스틱 */ }
+      if (!message) message = gitApi.heuristicMessage();
+      ok(res, { message });
+    } catch (e) { res.status(500).json({ error: e.message }); }
+  });
+  r.post('/git/commit', guard((req, res) => {
+    const out = gitApi.commitStaged(String(req.body?.message || ''));
+    bus.event('User', 'user', `git 커밋 — ${out.sha} "${String(req.body?.message || '').slice(0, 40)}"`);
+    ok(res, out);
+  }));
 
   // ---- 알림 채널 ----
   r.get('/notify-channels', (req, res) => ok(res, db.getSetting('notif_channels', [])));

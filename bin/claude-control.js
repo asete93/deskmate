@@ -5,6 +5,22 @@ import path from 'node:path';
 import os from 'node:os';
 import { fileURLToPath } from 'node:url';
 
+// Node 버전 게이트 — node:sqlite(내장 DB)가 22.5+ 필요. 낮으면 알 수 없는 크래시 대신 명확히 안내.
+const [_maj, _min] = process.versions.node.split('.').map(Number);
+if (_maj < 22 || (_maj === 22 && _min < 5)) {
+  console.error(`
+[claude-control] Node.js ${process.versions.node}는 지원되지 않습니다 — Node 22.5 이상이 필요합니다.
+(내장 SQLite 모듈 node:sqlite 사용)
+
+업그레이드 방법:
+  nvm:  nvm install 22 && nvm use 22
+  또는  https://nodejs.org 에서 LTS(22+) 설치
+
+설치 후 다시 실행하세요: npx claude-control
+`);
+  process.exit(1);
+}
+
 const args = process.argv.slice(2);
 const flag = (name, def) => {
   const i = args.findIndex(a => a === `--${name}`);
@@ -14,7 +30,7 @@ const flag = (name, def) => {
 };
 
 if (args.includes('--help') || args.includes('-h')) {
-  console.log(`claude-control — Claude Code 팀 오케스트레이션 대시보드
+  console.log(`deskmate — Claude Code 팀 오케스트레이션 대시보드 (Deskmate)
 
 사용법:
   npx claude-control [옵션]
@@ -44,7 +60,7 @@ if (allow) process.env.ALLOW_CIDR = allow;
 if (args.includes('--https')) process.env.HTTPS = '1';
 process.env.HOST = flag('host', process.env.HOST || '0.0.0.0');
 process.env.AGENT_DRIVER = flag('driver', process.env.AGENT_DRIVER || 'auto');
-process.env.SERVICE_NAME = process.env.SERVICE_NAME || `Claude Control · ${name}`;
+process.env.SERVICE_NAME = process.env.SERVICE_NAME || `Deskmate · ${name}`;
 process.env.DATA_DIR = flag('data', process.env.DATA_DIR || path.join(os.homedir(), '.claude-control', name));
 
 // ambient 로그인(~/.claude) 감지 시 auto → sdk 승격 힌트

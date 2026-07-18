@@ -228,7 +228,12 @@ export function createManager({ db, bus, notify, workDir, uploadsDir, driverKind
     }
     // 대표가 팀원에게 직접 보낸 메시지 표식 — 팀원은 이 표식이 있을 때만 대표에게 직접 답한다
     // (팀장 위임 브리프와 같은 세션을 공유하므로 출처를 명시해야 보고 대상이 갈리지 않음)
-    if (!toMain) outText = `[대표님 직접 문의 — 보고·답변은 대표님에게]\n\n${outText}`;
+    if (!toMain) {
+      const langNote = db.getSetting('lang', 'ko') === 'ko'
+        ? '\n\n[시스템: 역할상 다른 언어가 필요한 경우가 아니면 한국어로 답하라]'
+        : '\n\n[System: unless your role requires another language, respond in English]';
+      outText = `[대표님 직접 문의 — 보고·답변은 대표님에게]\n\n${outText}${langNote}`;
+    }
     // 이 에이전트가 이 채널의 카드(선택/폼 등)를 기다리는 중이면 — 세션이 카드에 블록돼
     // 새 메시지가 처리되지 않고 행이 걸린다. 메시지를 카드의 자유 답변으로 주입해 즉시 진행시킨다.
     const pend = db.listPendingInteractions()
@@ -566,7 +571,7 @@ export function createManager({ db, bus, notify, workDir, uploadsDir, driverKind
 
   function state() {
     return {
-      service: { name: process.env.SERVICE_NAME || 'Claude Control', port: Number(process.env.PORT || 3200) },
+      service: { name: process.env.SERVICE_NAME || 'Deskmate', port: Number(process.env.PORT || 3200) },
       driver: driverKind,
       goal: db.getSetting('goal', ''),
       goal_history: db.getSetting('goal_history', []),
@@ -585,6 +590,7 @@ export function createManager({ db, bus, notify, workDir, uploadsDir, driverKind
       show_git_menu: db.getSetting('show_git_menu', false),
       terminal_enabled: db.getSetting('terminal_enabled', false),
       files_enabled: db.getSetting('files_enabled', false),
+      caps: ctx.caps || { git: true, codex: false },
       pending_interactions: db.listPendingInteractions().length,
       claude_md: readClaudeMd(),
     };
@@ -641,5 +647,6 @@ export function createManager({ db, bus, notify, workDir, uploadsDir, driverKind
     ctx, init, state, sendChat, answerInteraction, setGoal, setMode, setLang, setAgentConfig,
     hireAgent, addExternalAgent, removeAgent, interruptAgent, resetAgentSession, createThread, renameThread, deleteThread, clearThread, setThreadConfig, decideApproval, getAgentPrompt, readClaudeMd, saveClaudeMd, resetAll, resetAllMemory,
     listModels: () => driver.listModels(),
+    oneShotText: (prompt) => (driver.oneShotText ? driver.oneShotText(prompt) : Promise.resolve('')),
   };
 }

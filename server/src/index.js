@@ -2,6 +2,7 @@ import express from 'express';
 import http from 'node:http';
 import https from 'node:https';
 import path from 'node:path';
+import { execSync } from 'node:child_process';
 import { fileURLToPath } from 'node:url';
 import { WebSocketServer } from 'ws';
 import { openDb } from './db.js';
@@ -42,6 +43,10 @@ const bus = createBus(db);
 const notify = createNotifier(db);
 const manager = createManager({ db, bus, notify, workDir: WORK_DIR, uploadsDir: UPLOADS_DIR, driverKind });
 manager.ctx.gitApi = gitApi;
+// 서버 기능 감지 — 없으면 해당 메뉴/기능이 UI에서 비활성 안내된다 (기동은 계속)
+const hasBin = (cmd) => { try { execSync(`${cmd} --version`, { stdio: 'ignore' }); return true; } catch { return false; } };
+manager.ctx.caps = { git: hasBin('git'), codex: hasBin('codex') };
+if (!manager.ctx.caps.git) console.warn('[claude-control] git 미설치 — Git 메뉴 비활성 (설치 후 재시작하면 활성화)');
 manager.init();
 startScheduler({ db, bus, manager });
 
@@ -101,7 +106,7 @@ app.use('/uploads', express.static(UPLOADS_DIR));
 // 아티팩트 미리보기: 워크스페이스 정적 서빙 — 상대경로 CSS/JS가 그대로 동작
 app.use('/workspace', express.static(WORK_DIR));
 app.use(express.static(path.join(ROOT, 'web')));
-app.get('/healthz', (req, res) => res.json({ ok: true, service: process.env.SERVICE_NAME || 'Claude Control', driver: driverKind }));
+app.get('/healthz', (req, res) => res.json({ ok: true, service: process.env.SERVICE_NAME || 'Deskmate', driver: driverKind }));
 // SPA 폴백 — 정적 자원 경로(workspace/uploads/dist)는 제외해 미존재 파일이 404로 떨어지게
 app.get(/^\/(?!api|ws|workspace|uploads|dist).*/, (req, res) => res.sendFile(path.join(ROOT, 'web/index.html')));
 
@@ -135,7 +140,7 @@ server.listen(PORT, HOST, () => {
   const shownHost = HOST === '0.0.0.0' ? 'localhost' : HOST;
   console.log('');
   console.log('┌──────────────────────────────────────────────────');
-  console.log(`│  ${process.env.SERVICE_NAME || 'Claude Control'}`);
+  console.log(`│  ${process.env.SERVICE_NAME || 'Deskmate'}`);
   console.log(`│  ▶ ${scheme}://${shownHost}:${actualPort}  (bind ${HOST}:${actualPort})`);
   if (tls) console.log('│  (자체 서명 인증서 — 브라우저 최초 경고는 "계속 진행"으로 통과)');
   if (useHttps && !tls) console.log('│  ⚠ HTTPS 요청됐으나 openssl 없어 HTTP로 폴백');

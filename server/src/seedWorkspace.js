@@ -16,7 +16,9 @@ export function seedWorkspace(workDir) {
     fs.writeFileSync(p, content);
   };
 
-  git('init', '-b', 'main');
+  let gitOk = true;
+  try { execFileSync('git', ['--version'], { stdio: 'ignore' }); } catch { gitOk = false; }
+  if (gitOk) { try { git('init', '-b', 'main'); } catch { gitOk = false; } }
   write('README.md', '# Workspace\n\n에이전트 팀 작업 공간.\n');
   write('CLAUDE.md', `# CLAUDE.md — 프로젝트 지침 (자유 편집 영역)
 
@@ -36,7 +38,13 @@ export function seedWorkspace(workDir) {
 ## 도메인 지식 · 주의사항
 - (팀이 알아야 할 프로젝트 고유의 맥락을 적어주세요)
 `);
-  git('add', '-A');
-  git(...as('팀장'), 'commit', '-q', '-m', 'chore: 워크스페이스 초기화');
+  if (gitOk) {
+    try {
+      git('add', '-A');
+      git(...as('팀장'), 'commit', '-q', '-m', 'chore: 워크스페이스 초기화');
+    } catch { /* git 실패해도 워크스페이스 파일은 유효 */ }
+  } else {
+    console.warn('[claude-control] git 미설치 — 워크스페이스를 git 없이 시드합니다 (Git 메뉴 비활성)');
+  }
   return true;
 }

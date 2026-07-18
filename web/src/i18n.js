@@ -3,6 +3,32 @@ import { store } from './store.js';
 // 다국어 — 키는 한국어 원문. 사전에 없는 문자열은 한국어 그대로(폴백).
 // 서버 설정 lang('ko'|'en')이 UI와 에이전트 지침(응답 언어)을 함께 전환한다.
 const EN = {
+  // ── 최근 기능 (파일·초기화·팝업·git 등) ──
+  '결정 전에 전문을 확인하세요': 'Review the full text before deciding',
+  '기억 초기화': 'Reset memory',
+  '대화 초기화': 'Clear conversation',
+  '모델·설정 변경': 'Model & settings',
+  '무엇을 할까요?': 'What would you like to do?',
+  '붙여넣은 텍스트': 'Pasted text',
+  '사용량': 'Usage',
+  '워크스페이스 파일 탐색기·에디터. 끄면 메뉴·파일 API가 모두 차단됩니다.': 'Workspace file explorer & editor. When off, the menu and file APIs are blocked.',
+  '전문 보기 →': 'View full text →',
+  '전체 기억 초기화': 'Reset all memory',
+  '줄': ' lines',
+  '채팅으로 이동': 'Open chat',
+  '팀장 설정': 'Team Lead settings',
+  '팀장(모든 방)·팀원 전원의 세션 기억만 리셋합니다. 대화 기록·티켓·결재·워크스페이스 파일은 유지되고, 대기 중인 질문 카드는 취소됩니다.': "Resets only the session memory of the Team Lead (all rooms) and every member. Chat history, tickets, approvals and workspace files are kept; pending cards are cancelled.",
+  // git 작업 공간
+  '커밋 이력': 'Commit history',
+  '변경사항 · 커밋': 'Changes · Commit',
+  '전체 스테이지': 'Stage all',
+  '스테이징됨': 'Staged',
+  '미스테이징': 'Unstaged',
+  '내리기': 'Unstage',
+  '+ 스테이지': '+ Stage',
+  '커밋에 포함': 'included in commit',
+  '변경': 'changes',
+
   // NAV / 헤더
   '대시보드': 'Dashboard',
   '채팅': 'Chat',
