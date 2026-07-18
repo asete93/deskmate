@@ -12,9 +12,9 @@ import { ReportLinkCard } from './reports.jsx';
 import { ReportModal, ReportBadge } from './report.jsx';
 
 const MODES = [
-  { key: 'plan', label: 'Plan Mode', desc: 'Plan Mode — 계획까지만 수행하고, 실행 전 사용자 승인을 받습니다.' },
-  { key: 'auto', label: 'Auto Mode', desc: 'Auto Mode — 승인 지정 항목 외에는 자동으로 실행합니다.' },
-  { key: 'ask', label: 'Ask Mode', desc: 'Ask Mode — 단계별로 사용자 확인을 요청합니다.' },
+  { key: 'plan', label: 'Plan Mode', desc: '계획까지만 수행하고, 실행 전 사용자 승인을 받습니다.' },
+  { key: 'auto', label: 'Auto Mode', desc: '승인 지정 항목 외에는 자동으로 실행합니다.' },
+  { key: 'ask', label: 'Ask Mode', desc: '단계별로 사용자 확인을 요청합니다.' },
 ];
 
 // ---- 인터랙션 카드 4종 ----
@@ -1058,7 +1058,7 @@ export function ChatInput({ channel, target = null, placeholder, inCard = false,
           onKeyDown={e => { if (e.key === 'Enter' && !e.shiftKey) { e.preventDefault(); send(); e.target.style.height = 'auto'; } }}
           placeholder={placeholder}
           style={{ flex: 1, border: 'none', outline: 'none', fontSize: '14.5px', background: 'transparent', minWidth: 0, resize: 'none', fontFamily: 'inherit', lineHeight: 1.5, maxHeight: '132px', padding: '0', display: 'block' }} />
-        <Btn variant="primary" onClick={send}>{sending ? '전송 중…' : '보내기'}</Btn>
+        <Btn variant="primary" onClick={send}>{sending ? t('전송 중…') : t('보내기')}</Btn>
       </div>
     </div>
   );
@@ -1189,7 +1189,7 @@ export function ChatScreen({ openGoal, param }) {
             <div style={{ display: 'flex', gap: '6px', flexWrap: 'wrap' }}>
               {MODES.map(md => <SegPill key={md.key} active={store.mode === md.key} onClick={() => withBusy(`mode:${md.key}`, setMode(md.key))}>{cfgBusy === `mode:${md.key}` ? <Spin /> : null} {md.label}</SegPill>)}
             </div>
-            <div style={{ fontSize: '12.5px', color: C.t58, marginTop: '8px' }}>{MODES.find(m => m.key === store.mode)?.desc}</div>
+            <div style={{ fontSize: '12.5px', color: C.t58, marginTop: '8px' }}>{(() => { const md = MODES.find(m => m.key === store.mode); return md ? `${md.label} — ${t(md.desc)}` : ''; })()}</div>
           </div>
           {/* 이 방 전용 스펙 — 미지정(기본값)이면 아래 팀장 기본값 사용. 잡담 방은 저사양으로 토큰 절약 */}
           <div style={{ width: '100%', background: C.goldLight, border: `1px solid ${C.goldBorder}`, borderRadius: '10px', padding: '12px 14px' }}>
@@ -1244,11 +1244,11 @@ export function ChatScreen({ openGoal, param }) {
           <div style={{ display: 'flex', alignItems: 'center', marginBottom: '14px', gap: '10px', flexWrap: 'wrap' }}>
             <div style={{ flex: 1 }}>
               <div style={{ fontSize: '16px', fontWeight: 600, color: C.heading }}>CLAUDE.md</div>
-              <div style={{ fontSize: '12.5px', color: C.t58, marginTop: '2px' }}>프로젝트 지침 (자유 편집) · 팀 구조 등 핵심 규칙은 플랫폼 지침으로 고정</div>
+              <div style={{ fontSize: '12.5px', color: C.t58, marginTop: '2px' }}>{t('프로젝트 지침 (자유 편집) · 팀 구조 등 핵심 규칙은 플랫폼 지침으로 고정')}</div>
             </div>
-            <Btn variant="darkOutline" small onClick={togglePlatform}>{platformMd != null ? '플랫폼 지침 닫기' : '플랫폼 지침 보기'}</Btn>
+            <Btn variant="darkOutline" small onClick={togglePlatform}>{platformMd != null ? t('플랫폼 지침 닫기') : t('플랫폼 지침 보기')}</Btn>
             {!mdEditing ? (
-              <Btn variant="outline" small onClick={() => { setMdDraft(store.claude_md); setMdEditing(true); }}>수정</Btn>
+              <Btn variant="outline" small onClick={() => { setMdDraft(store.claude_md); setMdEditing(true); }}>{t('수정')}</Btn>
             ) : (
               <>
                 <Btn variant="darkOutline" small onClick={() => setMdEditing(false)}>취소</Btn>
@@ -1259,8 +1259,8 @@ export function ChatScreen({ openGoal, param }) {
           {platformMd != null && (
             <div style={{ marginBottom: '14px' }}>
               <div style={{ display: 'flex', alignItems: 'center', gap: '8px', marginBottom: '8px' }}>
-                <span style={{ fontSize: '12px', fontWeight: 700, color: C.goldText, background: C.goldLight, borderRadius: '50px', padding: '3px 10px' }}>플랫폼 불변 지침 · 읽기전용</span>
-                <span style={{ fontSize: '12px', color: C.t58 }}>팀 구조·행동 원칙 — CLAUDE.md보다 항상 우선 적용</span>
+                <span style={{ fontSize: '12px', fontWeight: 700, color: C.goldText, background: C.goldLight, borderRadius: '50px', padding: '3px 10px' }}>{t('플랫폼 불변 지침 · 읽기전용')}</span>
+                <span style={{ fontSize: '12px', color: C.t58 }}>{t('팀 구조·행동 원칙 — CLAUDE.md보다 항상 우선 적용')}</span>
               </div>
               <pre style={{ margin: 0, background: C.goldLight, border: `1px solid ${C.goldBorder}`, borderRadius: '8px', padding: '18px', fontFamily: "ui-monospace,'SF Mono',Menlo,monospace", fontSize: '12.5px', lineHeight: 1.7, whiteSpace: 'pre-wrap', color: C.t87, maxHeight: '380px', overflowY: 'auto' }}>{platformMd}</pre>
             </div>

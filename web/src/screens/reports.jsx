@@ -30,8 +30,8 @@ export function ReportsScreen({ param }) {
       <div style={{ fontSize: '13px', color: C.t58 }}>{t('팀이 작성한 산출 보고서')} {reports.length} — {t('열람·내보내기·삭제할 수 있습니다.')}</div>
       {reports.length === 0 && (
         <section style={card({ padding: '40px', textAlign: 'center' })}>
-          <div style={{ fontSize: '16px', fontWeight: 600, color: C.heading }}>아직 보고서가 없습니다</div>
-          <div style={{ fontSize: '13.5px', color: C.t58, marginTop: '6px' }}>요청이 완료되면 팀장이 보고서를 작성하고, 채팅에 링크가 게시됩니다.</div>
+          <div style={{ fontSize: '16px', fontWeight: 600, color: C.heading }}>{t('아직 보고서가 없습니다')}</div>
+          <div style={{ fontSize: '13.5px', color: C.t58, marginTop: '6px' }}>{t('요청이 완료되면 팀장이 보고서를 작성하고, 채팅에 링크가 게시됩니다.')}</div>
         </section>
       )}
       {reports.map(r => (

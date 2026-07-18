@@ -93,7 +93,7 @@ function ServiceSwitcher({ mobile }) {
             <div style={{ fontSize: '13px', fontWeight: 600, color: C.t87, whiteSpace: 'nowrap', overflow: 'hidden', textOverflow: 'ellipsis' }}>{sv.name}</div>
             <div style={{ fontSize: '11.5px', color: C.t58, whiteSpace: 'nowrap', overflow: 'hidden', textOverflow: 'ellipsis' }}>{sv.url}</div>
           </div>
-          {sv.url === cur.url && <span style={{ fontSize: '11px', fontWeight: 700, color: C.heading, flexShrink: 0 }}>연결됨</span>}
+          {sv.url === cur.url && <span style={{ fontSize: '11px', fontWeight: 700, color: C.heading, flexShrink: 0 }}>{t('연결됨')}</span>}
         </div>
       ))}
     </div>
@@ -402,7 +402,7 @@ export function ExternalAiModal({ onClose }) {
       {noCodex && (
         <div style={{ marginTop: '10px', background: C.goldLight, border: `1px solid ${C.goldBorder}`, borderRadius: '10px', padding: '10px 14px', fontSize: '12.5px', lineHeight: 1.6, color: C.goldText, fontWeight: 600 }}>
           {t('⚠ 서버에 Codex CLI가 설치되어 있지 않습니다. 연동은 등록되지만 실제 응답은 설치 후부터 동작합니다.')}<br />
-          {t('설치')}: <code style={{ background: '#fff', borderRadius: '4px', padding: '1px 6px' }}>npm i -g @openai/codex</code> 후 <code style={{ background: '#fff', borderRadius: '4px', padding: '1px 6px' }}>codex login</code>
+          {t('설치')}: <code style={{ background: '#fff', borderRadius: '4px', padding: '1px 6px' }}>npm i -g @openai/codex</code> {t('후')} <code style={{ background: '#fff', borderRadius: '4px', padding: '1px 6px' }}>codex login</code>
         </div>
       )}
       <div style={{ ...lbl, margin: '18px 0 8px' }}>PROVIDER</div>

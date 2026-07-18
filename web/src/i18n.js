@@ -3,6 +3,22 @@ import { store } from './store.js';
 // 다국어 — 키는 한국어 원문. 사전에 없는 문자열은 한국어 그대로(폴백).
 // 서버 설정 lang('ko'|'en')이 UI와 에이전트 지침(응답 언어)을 함께 전환한다.
 const EN = {
+  '연결됨': 'Connected',
+  '후': 'then',
+  '보내기': 'Send',
+  '전송 중…': 'Sending…',
+  '수정': 'Edit',
+  '아직 보고서가 없습니다': 'No reports yet',
+  '요청이 완료되면 팀장이 보고서를 작성하고, 채팅에 링크가 게시됩니다.': 'When a request completes, the Team Lead writes a report and a link is posted in chat.',
+  '프로젝트 지침 (자유 편집) · 팀 구조 등 핵심 규칙은 플랫폼 지침으로 고정': 'Project instructions (freely editable) · core rules are fixed by the platform constitution',
+  '플랫폼 지침 보기': 'View platform constitution',
+  '플랫폼 지침 닫기': 'Hide platform constitution',
+  '플랫폼 불변 지침 · 읽기전용': 'Immutable platform constitution · read-only',
+  '팀 구조·행동 원칙 — CLAUDE.md보다 항상 우선 적용': 'Team structure & working principles — always override CLAUDE.md',
+  '계획까지만 수행하고, 실행 전 사용자 승인을 받습니다.': 'Plans only; execution requires your approval.',
+  '승인 지정 항목 외에는 자동으로 실행합니다.': 'Runs automatically except items marked for approval.',
+  '단계별로 사용자 확인을 요청합니다.': 'Asks for confirmation at each step.',
+
   '변경': 'Change',
   '"@이름 요청내용"으로 이 팀원을 직접 부를 수 있습니다.': 'Call this member directly with "@name your request".',
   '아바타 (1~4자 · 이모지 가능)': 'Avatar (1–4 chars · emoji OK)',

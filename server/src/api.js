@@ -276,7 +276,7 @@ export function createApi({ db, bus, manager, gitApi, uploadsDir, auth, termHub,
 
   // ---- CLAUDE.md (Layer 2) + 플랫폼 불변 지침 (Layer 1, 읽기전용) ----
   r.get('/claude-md', (req, res) => ok(res, { content: manager.readClaudeMd() }));
-  r.get('/platform-prompt', (req, res) => ok(res, { content: platformPromptForDisplay(req.query.lang || 'ko') }));
+  r.get('/platform-prompt', (req, res) => ok(res, { content: platformPromptForDisplay(req.query.lang || db.getSetting('lang', 'ko')) }));
   r.post('/claude-md', guard((req, res) => { manager.saveClaudeMd(String(req.body.content ?? '')); ok(res); }));
 
   // ---- Git ----
