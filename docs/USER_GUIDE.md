@@ -10,7 +10,7 @@
 ## 1. 시작하기
 
 ```bash
-npx github:<유저명>/claude-control \
+npx github:asete93/deskmate \
   --port auto --name myproject \
   --allow 100.64.0.0/10,192.168.0.0/16,127.0.0.1/32 \
   --https --lang ko --driver sdk
@@ -105,14 +105,14 @@ Description=Deskmate
 After=network.target
 [Service]
 Environment=CLAUDE_CODE_OAUTH_TOKEN=<토큰>
-ExecStart=/usr/bin/npx github:<유저명>/claude-control --port 3200 --name prod --https --allow <신뢰대역>
+ExecStart=/usr/bin/npx github:asete93/deskmate --port 3200 --name prod --https --allow <신뢰대역>
 Restart=always
 User=<전용계정>   # root 대신 권한 최소화 계정 권장
 [Install]
 WantedBy=multi-user.target
 ```
 
-- 업데이트: `rm -rf ~/.npm/_npx` 후 재기동(또는 `npm i -g github:<유저명>/claude-control` 재실행). 데이터는 데이터 폴더에 있어 안전.
+- 업데이트: `rm -rf ~/.npm/_npx` 후 재기동(또는 `npm i -g github:asete93/deskmate` 재실행). 데이터는 데이터 폴더에 있어 안전.
 - 완전 초기화: 서비스 중지 → 데이터 폴더 삭제 → 재기동.
 - 보안 하드닝: 내부망/VPN 우선, 공개 시 로그인+`--allow`+TLS 리버스 프록시, systemd `ProtectSystem=strict`·`NoNewPrivileges=yes` 권장.
 

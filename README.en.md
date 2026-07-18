@@ -119,10 +119,10 @@ Optional dependencies: `git` (Git menu; absent = that menu is disabled), `codex`
 
 ```bash
 # Run straight from GitHub (no build step)
-npx github:<user>/claude-control
+npx github:asete93/deskmate
 
 # Options
-npx github:<user>/claude-control \
+npx github:asete93/deskmate \
   --port auto \                     # auto-pick a free port (printed in the banner)
   --name myproject \                # separate data space (~/.claude-control/myproject)
   --allow 192.168.0.0/16 \          # allowed IP ranges (all allowed if omitted)
@@ -137,17 +137,17 @@ Authentication (to drive real Claude) — one of:
 ```bash
 # 1) Recommended: long-lived subscription token
 claude setup-token
-CLAUDE_CODE_OAUTH_TOKEN=<token> npx github:<user>/claude-control
+CLAUDE_CODE_OAUTH_TOKEN=<token> npx github:asete93/deskmate
 
 # 2) A machine already logged in via `claude /login` just works (auto-detected)
 
 # 3) API key
-ANTHROPIC_API_KEY=sk-ant-... npx github:<user>/claude-control
+ANTHROPIC_API_KEY=sk-ant-... npx github:asete93/deskmate
 ```
 
 Without credentials it boots with the **mock driver** (full-flow simulation) so you can preview the UI.
 
-Updating: if a new commit doesn't show up, `rm -rf ~/.npm/_npx` and rerun, or `npm i -g github:<user>/claude-control`. Your data lives outside the package (`~/.claude-control/`) and survives updates.
+Updating: if a new commit doesn't show up, `rm -rf ~/.npm/_npx` and rerun, or `npm i -g github:asete93/deskmate`. Your data lives outside the package (`~/.claude-control/`) and survives updates.
 
 ## Screens
 

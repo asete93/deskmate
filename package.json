@@ -55,5 +55,13 @@
     "marked": "^18.0.6",
     "preact": "^10.25.0"
   },
-  "license": "MIT"
+  "license": "MIT",
+  "repository": {
+    "type": "git",
+    "url": "https://github.com/asete93/deskmate.git"
+  },
+  "homepage": "https://github.com/asete93/deskmate#readme",
+  "bugs": {
+    "url": "https://github.com/asete93/deskmate/issues"
+  }
 }

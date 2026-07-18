@@ -10,7 +10,7 @@ Contents: [Getting started](#1-getting-started) · [Core structure](#2-core-stru
 ## 1. Getting started
 
 ```bash
-npx github:<user>/claude-control \
+npx github:asete93/deskmate \
   --port auto --name myproject \
   --allow 100.64.0.0/10,192.168.0.0/16,127.0.0.1/32 \
   --https --lang en --driver sdk
@@ -105,14 +105,14 @@ Description=Deskmate
 After=network.target
 [Service]
 Environment=CLAUDE_CODE_OAUTH_TOKEN=<token>
-ExecStart=/usr/bin/npx github:<user>/claude-control --port 3200 --name prod --https --allow <trusted-cidr>
+ExecStart=/usr/bin/npx github:asete93/deskmate --port 3200 --name prod --https --allow <trusted-cidr>
 Restart=always
 User=<dedicated-user>   # prefer a least-privilege account over root
 [Install]
 WantedBy=multi-user.target
 ```
 
-- Update: `rm -rf ~/.npm/_npx` and restart (or reinstall via `npm i -g github:<user>/claude-control`). Data lives in the data folder and survives.
+- Update: `rm -rf ~/.npm/_npx` and restart (or reinstall via `npm i -g github:asete93/deskmate`). Data lives in the data folder and survives.
 - Full reset: stop the service → delete the data folder → start again.
 - Hardening: private network/VPN first; if public, login + `--allow` + a TLS reverse proxy; consider systemd `ProtectSystem=strict`, `NoNewPrivileges=yes`.
 

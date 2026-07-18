@@ -121,10 +121,10 @@
 
 ```bash
 # GitHub에서 바로 실행 (설치 즉시 기동 — 빌드 불필요)
-npx github:<유저명>/claude-control
+npx github:asete93/deskmate
 
 # 주요 옵션
-npx github:<유저명>/claude-control \
+npx github:asete93/deskmate \
   --port auto \                     # 남는 포트 자동 할당 (기동 배너에 실제 주소 표시)
   --name myproject \                # 데이터 공간 분리 (~/.claude-control/myproject)
   --allow 192.168.0.0/16 \          # 접근 허용 IP 대역 (미지정 시 전체 허용)
@@ -139,12 +139,12 @@ npx github:<유저명>/claude-control \
 ```bash
 # 1) 권장: Claude 구독 장기 토큰
 claude setup-token   # 발급 후
-CLAUDE_CODE_OAUTH_TOKEN=<토큰> npx github:<유저명>/claude-control
+CLAUDE_CODE_OAUTH_TOKEN=<토큰> npx github:asete93/deskmate
 
 # 2) 이미 `claude /login` 된 머신이면 그대로 실행 (자동 감지 → sdk 승격)
 
 # 3) API 키
-ANTHROPIC_API_KEY=sk-ant-... npx github:<유저명>/claude-control
+ANTHROPIC_API_KEY=sk-ant-... npx github:asete93/deskmate
 ```
 
 기동하면 배너에 접속 주소가 출력됩니다:
@@ -158,7 +158,7 @@ ANTHROPIC_API_KEY=sk-ant-... npx github:<유저명>/claude-control
 
 인증 없이 실행하면 **mock 드라이버**(전 플로우 시뮬레이션)로 떠서 UI를 미리 볼 수 있습니다.
 
-업데이트: 새 커밋 반영이 안 되면 `rm -rf ~/.npm/_npx` 후 재실행하거나, `npm i -g github:<유저명>/claude-control`로 전역 설치 후 같은 명령으로 재설치하세요. 데이터는 패키지 밖(`~/.claude-control/`)이라 업데이트에 안전합니다.
+업데이트: 새 커밋 반영이 안 되면 `rm -rf ~/.npm/_npx` 후 재실행하거나, `npm i -g github:asete93/deskmate`로 전역 설치 후 같은 명령으로 재설치하세요. 데이터는 패키지 밖(`~/.claude-control/`)이라 업데이트에 안전합니다.
 
 ## 화면
 
