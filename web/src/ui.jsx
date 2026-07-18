@@ -1,6 +1,7 @@
 import { h, Fragment } from 'preact';
 import { useState } from 'preact/hooks';
 import { store } from './store.js';
+import { t } from './i18n.js';
 
 // ---- Green Apron 토큰 ----
 export const C = {
@@ -23,14 +24,14 @@ export const AGENT_STATUS = {
   idle: { label: '대기', dot: C.border, bg: C.ceramic, color: C.t58 },
   waiting: { label: '응답 대기', dot: C.gold, bg: C.goldLight, color: C.goldText },
 };
-export const agentStatus = (s) => AGENT_STATUS[s] || AGENT_STATUS.idle;
+export const agentStatus = (s) => { const st = AGENT_STATUS[s] || AGENT_STATUS.idle; return { ...st, label: t(st.label) }; };
 
 export function actorChip(name) {
   if (name === 'User') return { bg: C.goldLight, color: C.goldText };
   if (name === 'Main' || name === '팀장') return { bg: C.dark, color: '#fff' };
   return { bg: C.ceramic, color: C.sub };
 }
-export const actorLabel = (name) => (name === 'Main' ? '팀장' : name);
+export const actorLabel = (name) => (name === 'Main' || name === '팀장' ? t('팀장') : name);
 
 export const PRIO = {
   P0: { bg: 'rgba(200,32,20,0.10)', color: C.danger },

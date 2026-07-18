@@ -20,17 +20,17 @@ export function OrgScreen({ openAi }) {
   return (
     <div style={{ display: 'flex', flexDirection: 'column', alignItems: 'center' }}>
       <div style={{ width: '100%', maxWidth: '960px', display: 'flex', alignItems: 'center', marginBottom: '20px' }}>
-        <div style={{ fontSize: '14px', fontWeight: 600, color: C.t58 }}>회사 조직도</div>
+        <div style={{ fontSize: '14px', fontWeight: 600, color: C.t58 }}>{t('회사 조직도')}</div>
         <div style={{ marginLeft: 'auto' }}>
-          <Btn variant="outline" onClick={openAi}>외부 AI 연동</Btn>
+          <Btn variant="outline" onClick={openAi}>{t('외부 AI 연동')}</Btn>
         </div>
       </div>
 
       {/* 대표 */}
       <div style={{ background: C.goldLight, border: `1px solid ${C.goldBorder}`, borderRadius: '12px', padding: '16px 28px', textAlign: 'center', minWidth: '200px' }}>
         <div style={{ fontSize: '11px', fontWeight: 700, letterSpacing: '0.1em', color: C.goldText }}>CEO</div>
-        <div style={{ fontSize: '16px', fontWeight: 600, marginTop: '4px' }}>대표</div>
-        <div style={{ fontSize: '12px', color: C.t58, marginTop: '2px' }}>목표 설정 · 승인 · 피드백</div>
+        <div style={{ fontSize: '16px', fontWeight: 600, marginTop: '4px' }}>{t('대표')}</div>
+        <div style={{ fontSize: '12px', color: C.t58, marginTop: '2px' }}>{t('목표 설정 · 승인 · 피드백')}</div>
       </div>
       <VLine h={26} />
 
@@ -58,7 +58,7 @@ export function OrgScreen({ openAi }) {
                 <div style={{ fontSize: '12px', color: C.t58, marginTop: '6px', lineHeight: 1.4 }}>{og.role}</div>
                 <div style={{ display: 'flex', gap: '5px', flexWrap: 'wrap', marginTop: '10px' }}>
                   <Chip bg={C.ceramic} color={C.t58} style={{ fontSize: '10.5px', fontWeight: 600 }}>{modelLabel(og.model)} · {og.effort}</Chip>
-                  {og.provider && <Chip bg={C.goldLight} color={C.goldText} style={{ fontSize: '10.5px' }}>{PROVIDER_LABEL[og.provider]} 연동</Chip>}
+                  {og.provider && <Chip bg={C.goldLight} color={C.goldText} style={{ fontSize: '10.5px' }}>{PROVIDER_LABEL[og.provider]} {t('연동')}</Chip>}
                 </div>
               </div>
             </div>

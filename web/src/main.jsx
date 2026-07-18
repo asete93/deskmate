@@ -236,10 +236,13 @@ function MobileTabs({ screen, badges }) {
 function fmtReset(iso) {
   if (!iso) return '';
   const ms = new Date(iso).getTime() - Date.now();
-  if (ms <= 0) return '곧 리셋';
+  const en = isEn();
+  if (ms <= 0) return en ? 'resets soon' : '곧 리셋';
   const totalMin = Math.round(ms / 60000);
   const d = Math.floor(totalMin / 1440), hh = Math.floor((totalMin % 1440) / 60), mm = totalMin % 60;
-  return `${d ? `${d}일 ` : ''}${hh ? `${hh}시간 ` : ''}${mm}분 후 리셋`;
+  return en
+    ? `resets in ${d ? `${d}d ` : ''}${hh ? `${hh}h ` : ''}${mm}m`
+    : `${d ? `${d}일 ` : ''}${hh ? `${hh}시간 ` : ''}${mm}분 후 리셋`;
 }
 const fmtTok2 = (n) => (n >= 1e6 ? `${(n / 1e6).toFixed(1)}M` : n >= 1000 ? `${(n / 1000).toFixed(1)}k` : String(n || 0));
 
@@ -284,7 +287,7 @@ function UsageWidget() {
     <div style={{ position: 'fixed', right: '18px', bottom: fixedBottom, zIndex: 119, width: '284px', maxWidth: 'calc(100vw - 36px)', background: C.dark, color: '#fff', borderRadius: '14px', boxShadow: '0 4px 10px rgba(0,0,0,0.28), 0 12px 32px rgba(0,0,0,0.22)', padding: '16px 18px' }}>
       <div style={{ display: 'flex', alignItems: 'center', gap: '8px' }}>
         <span style={dotStyle(C.mint, 7, true)} />
-        <span style={{ fontSize: '12px', fontWeight: 700, letterSpacing: '0.08em', color: 'rgba(255,255,255,0.8)' }}>CLAUDE 사용량</span>
+        <span style={{ fontSize: '12px', fontWeight: 700, letterSpacing: '0.08em', color: 'rgba(255,255,255,0.8)' }}>{isEn() ? 'CLAUDE USAGE' : 'CLAUDE 사용량'}</span>
         {plan && <span style={{ fontSize: '10.5px', fontWeight: 700, background: C.gold, color: C.dark, borderRadius: '50px', padding: '1px 9px' }}>{plan}</span>}
         {store.usage.stale && <span title="일시적 조회 제한 — 마지막 값 표시 중" style={{ fontSize: '10px', color: 'rgba(255,255,255,0.5)' }}>지연</span>}
         <span onClick={() => setOpen(false)} title="닫기"
@@ -293,28 +296,28 @@ function UsageWidget() {
       {limits.length === 0 ? (
         <div style={{ fontSize: '12px', color: 'rgba(255,255,255,0.6)', marginTop: '10px', lineHeight: 1.5 }}>
           {store.usage.error
-            ? '사용량 API가 일시적으로 제한되었습니다 — 자동으로 재시도합니다.'
-            : '사용량 정보를 불러오는 중입니다…'}
+            ? (isEn() ? 'Usage API temporarily rate-limited — retrying automatically.' : '사용량 API가 일시적으로 제한되었습니다 — 자동으로 재시도합니다.')
+            : (isEn() ? 'Loading usage…' : '사용량 정보를 불러오는 중입니다…')}
         </div>
       ) : limits.map((li) => (
         <div key={li.kind + li.label} style={{ marginTop: '12px' }}>
           <div style={{ display: 'flex', justifyContent: 'space-between', alignItems: 'baseline' }}>
-            <span style={{ fontSize: '12px', fontWeight: 600 }}>{li.label}</span>
+            <span style={{ fontSize: '12px', fontWeight: 600 }}>{!isEn() ? li.label : li.label === '현재 세션' ? 'Current session' : li.label.startsWith('주간 · ') ? `Weekly · ${li.label.slice(5) === '모든 모델' ? 'all models' : li.label.slice(5)}` : li.label}</span>
             <span style={{ fontSize: '13px', fontWeight: 700, color: (li.percent || 0) >= 90 ? '#f0a89e' : '#fff' }}>
-              {li.percent != null ? `${li.percent}% 사용` : '—'}
+              {li.percent != null ? `${li.percent}% ${isEn() ? 'used' : '사용'}` : '—'}
             </span>
           </div>
           <div style={{ height: '6px', borderRadius: '50px', background: 'rgba(255,255,255,0.18)', overflow: 'hidden', marginTop: '5px' }}>
             <div style={{ height: '100%', width: `${Math.min(100, li.percent || 0)}%`, borderRadius: '50px', background: barColor(li.percent || 0, li.severity), transition: 'width 0.4s ease' }} />
           </div>
           <div style={{ display: 'flex', justifyContent: 'space-between', fontSize: '10.5px', color: 'rgba(255,255,255,0.55)', marginTop: '4px' }}>
-            <span>{li.percent != null ? `남은 ${Math.max(0, 100 - li.percent)}%` : ''}</span>
+            <span>{li.percent != null ? `${isEn() ? 'left' : '남은'} ${Math.max(0, 100 - li.percent)}%` : ''}</span>
             <span>{fmtReset(li.resets_at)}</span>
           </div>
         </div>
       ))}
       <div style={{ borderTop: '1px solid rgba(255,255,255,0.14)', marginTop: '12px', paddingTop: '10px', display: 'flex', justifyContent: 'space-between', fontSize: '11px', color: 'rgba(255,255,255,0.65)' }}>
-        <span>오늘 토큰</span>
+        <span>{isEn() ? 'Today' : '오늘 토큰'}</span>
         <span style={{ fontWeight: 600, color: '#fff' }}>in {fmtTok2(today.tokens_in)} · out {fmtTok2(today.tokens_out)}</span>
       </div>
     </div>

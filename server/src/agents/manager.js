@@ -157,9 +157,11 @@ export function createManager({ db, bus, notify, workDir, uploadsDir, driverKind
 
   // ---------- 부팅 ----------
   function init() {
+    // 신규 인스턴스 시드 언어 — --lang(CC_LANG) 우선, 없으면 기존 설정(기본 ko)
+    const seedLang = ['ko', 'en'].includes(process.env.CC_LANG) ? process.env.CC_LANG : db.getSetting('lang', 'ko');
     // 기본 방(삭제 불가, 내용 초기화만 가능). 구 DB는 팀장 단일 세션이던
     // agents.session_id를 기본 방으로 승계한다.
-    const mainThread = db.ensureThread('main', '메인 채팅');
+    const mainThread = db.ensureThread('main', seedLang === 'en' ? 'Main Chat' : '메인 채팅');
     const main = db.getMainAgent();
     if (main?.session_id && !mainThread.session_id) {
       db.updateThread('main', { session_id: main.session_id });
@@ -168,7 +170,9 @@ export function createManager({ db, bus, notify, workDir, uploadsDir, driverKind
       // 클린 초기 상태: Orchestrator(메인)만. 서브 에이전트는 시드하지 않는다 —
       // 사용자가 직접 추가하거나 Orchestrator가 승인 요청(request_agent_change)으로만 추가된다.
       // model 값은 supportedModels() 목록의 value — 'default'는 CLI 권장 최고성능 티어
-      db.insertAgent({ name: '팀장', kind: 'main', role: '계획 수립 · 산출물 검증 · 의도 파악', model: 'default', effort: 'high', status: 'idle', current_task: '' });
+      db.insertAgent(seedLang === 'en'
+        ? { name: 'TeamLead', kind: 'main', role: 'Planning · verification · intent analysis', model: 'default', effort: 'high', status: 'idle', current_task: '' }
+        : { name: '팀장', kind: 'main', role: '계획 수립 · 산출물 검증 · 의도 파악', model: 'default', effort: 'high', status: 'idle', current_task: '' });
       db.setSetting('goal', '');
       db.setSetting('mode', 'plan');
       db.setSetting('progress', 0);

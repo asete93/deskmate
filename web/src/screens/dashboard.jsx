@@ -19,7 +19,7 @@ export function Dashboard({ openGoal }) {
   const apSummary = apCount
     ? Object.entries(apPending.reduce((acc, a) => { const t = (CAT[a.action] || CAT.etc).text; acc[t] = (acc[t] || 0) + 1; return acc; }, {}))
       .map(([t, n]) => `${t} ${n}`).join(' · ')
-    : '팀원 고용 · 결정 사항 등';
+    : t('팀원 고용 · 결정 사항 등');
   const qCount = store.pendingCount;
 
   return (
@@ -31,11 +31,11 @@ export function Dashboard({ openGoal }) {
             <div style={label12}>GOAL</div>
             <div style={{ fontSize: '21px', fontWeight: 600, color: C.heading, marginTop: '8px', lineHeight: 1.45 }}>{store.goal}</div>
           </div>
-          <Btn variant="outline" onClick={openGoal}>목표 수정</Btn>
+          <Btn variant="outline" onClick={openGoal}>{t('목표 수정')}</Btn>
         </div>
         <div style={{ marginTop: '20px' }}>
           <div style={{ display: 'flex', justifyContent: 'space-between', fontSize: '13px', fontWeight: 600, color: C.t58, marginBottom: '8px' }}>
-            <span>전체 진행률</span><span style={{ color: C.heading }}>{store.progress}%</span>
+            <span>{t('전체 진행률')}</span><span style={{ color: C.heading }}>{store.progress}%</span>
           </div>
           <div style={{ height: '8px', borderRadius: '50px', background: C.ceramic, overflow: 'hidden' }}>
             <div style={{ height: '100%', borderRadius: '50px', background: C.cta, width: `${store.progress}%`, transition: 'width 0.4s ease' }} />
@@ -143,7 +143,7 @@ export function Dashboard({ openGoal }) {
           <section style={card({ padding: '24px' })}>
             <div style={{ display: 'flex', alignItems: 'center', marginBottom: '14px' }}>
               <div style={{ ...label12, flex: 1 }}>TICKETS</div>
-              <a onClick={() => nav('tickets')} style={{ fontSize: '13px', fontWeight: 600, cursor: 'pointer' }}>보드 열기 →</a>
+              <a onClick={() => nav('tickets')} style={{ fontSize: '13px', fontWeight: 600, cursor: 'pointer' }}>{t('보드 열기')} →</a>
             </div>
             <div style={{ display: 'grid', gridTemplateColumns: 'repeat(4,1fr)', gap: '8px' }}>
               {COLS.map(cl => (

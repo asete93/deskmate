@@ -1,6 +1,7 @@
 import { h, Fragment } from 'preact';
 import { useState } from 'preact/hooks';
 import { store } from '../store.js';
+import { t } from '../i18n.js';
 import { C, card, label12, Modal, Chip, StatusPill, PRIO, TICKET_STATUS, actorChip, actorLabel, fmtTime, fmtDateTime } from '../ui.jsx';
 
 const COLS = [
@@ -55,8 +56,8 @@ export function TicketsScreen() {
   return (
     <div>
       <div style={{ display: 'flex', gap: '8px', marginBottom: '14px' }}>
-        <div onClick={() => setView('board')} style={tabStyle(view === 'board')}>보드</div>
-        <div onClick={() => setView('table')} style={tabStyle(view === 'table')}>테이블</div>
+        <div onClick={() => setView('board')} style={tabStyle(view === 'board')}>{t('보드')}</div>
+        <div onClick={() => setView('table')} style={tabStyle(view === 'table')}>{t('테이블')}</div>
       </div>
 
       {view === 'board' ? (

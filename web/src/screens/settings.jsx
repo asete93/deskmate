@@ -36,16 +36,16 @@ function SchedulesCard() {
 
   const lbl = { fontSize: '11px', fontWeight: 600, letterSpacing: '0.08em', color: C.t58, marginBottom: '6px' };
   const repeatLabel = (s) => s.repeat === 'once'
-    ? `1회 · ${fmtDateTime(s.run_at)}`
-    : s.repeat === 'daily' ? `매일 ${s.at_time}` : `매주 ${WEEKDAYS[s.weekday ?? 1]} ${s.at_time}`;
+    ? `${t('1회')} · ${fmtDateTime(s.run_at)}`
+    : s.repeat === 'daily' ? `${t('매일')} ${s.at_time}` : `${t('매주')} ${t(WEEKDAYS[s.weekday ?? 1])} ${s.at_time}`;
   const targetName = (t) => t === 'main'
     ? (store.agents.find(a => a.kind === 'main')?.name || '팀장')
     : (store.agents.find(a => String(a.id) === String(t).split(':')[1])?.name || '(삭제된 팀원)');
 
   return (
     <section style={card({ padding: '24px' })}>
-      <div style={label12}>예약 작업</div>
-      <div style={{ fontSize: '13px', color: C.t58, marginTop: '4px' }}>지정한 시각·주기에 요청을 자동으로 전송합니다. 실행 결과는 팀 채팅에 기록됩니다.</div>
+      <div style={label12}>{t('예약 작업')}</div>
+      <div style={{ fontSize: '13px', color: C.t58, marginTop: '4px' }}>{t('지정한 시각·주기에 요청을 자동으로 전송합니다. 실행 결과는 팀 채팅에 기록됩니다.')}</div>
 
       <div style={{ display: 'flex', flexDirection: 'column', gap: '8px', marginTop: '14px' }}>
         {list.map(s => (
@@ -53,31 +53,31 @@ function SchedulesCard() {
             <div style={{ flex: 1, minWidth: '180px' }}>
               <div style={{ fontSize: '14px', fontWeight: 600 }}>{s.title}</div>
               <div style={{ fontSize: '12px', color: C.t58, marginTop: '2px' }}>
-                {repeatLabel(s)} · 대상 {targetName(s.target)}
-                {s.enabled && s.next_run_ts ? ` · 다음 실행 ${fmtDateTime(s.next_run_ts)}` : ''}
-                {s.last_run_ts ? ` · 마지막 ${fmtDateTime(s.last_run_ts)}` : ''}
+                {repeatLabel(s)} · {t('대상')} {targetName(s.target)}
+                {s.enabled && s.next_run_ts ? ` · ${t('다음 실행')} ${fmtDateTime(s.next_run_ts)}` : ''}
+                {s.last_run_ts ? ` · ${t('마지막')} ${fmtDateTime(s.last_run_ts)}` : ''}
               </div>
             </div>
             <div onClick={() => api.post(`/schedules/${s.id}/toggle`).then(load).catch(e => showToast(e.message))}
               style={{ width: '40px', height: '22px', borderRadius: '50px', position: 'relative', cursor: 'pointer', flexShrink: 0, transition: 'all 0.2s ease', background: s.enabled ? C.cta : C.border }}>
               <span style={{ position: 'absolute', top: '2px', width: '18px', height: '18px', borderRadius: '50%', background: '#fff', boxShadow: '0 1px 2px rgba(0,0,0,0.24)', transition: 'all 0.2s ease', left: s.enabled ? '20px' : '2px' }} />
             </div>
-            <Btn variant="darkOutline" small onClick={() => api.del(`/schedules/${s.id}`).then(load).catch(e => showToast(e.message))}>삭제</Btn>
+            <Btn variant="darkOutline" small onClick={() => api.del(`/schedules/${s.id}`).then(load).catch(e => showToast(e.message))}>{t('삭제')}</Btn>
           </div>
         ))}
-        {list.length === 0 && <div style={{ fontSize: '13px', color: C.t58 }}>등록된 예약 작업이 없습니다.</div>}
+        {list.length === 0 && <div style={{ fontSize: '13px', color: C.t58 }}>{t('등록된 예약 작업이 없습니다.')}</div>}
       </div>
 
       <div style={{ borderTop: `1px solid ${C.line}`, marginTop: '16px', paddingTop: '16px' }}>
-        <div style={lbl}>새 예약 작업</div>
+        <div style={lbl}>{t('새 예약 작업')}</div>
         <div style={{ display: 'flex', gap: '10px', flexWrap: 'wrap' }}>
-          <Input value={title} onInput={e => setTitle(e.target.value)} placeholder="제목 (예: 아침 진행 보고)" style={{ flex: 1, minWidth: '180px', width: 'auto' }} />
+          <Input value={title} onInput={e => setTitle(e.target.value)} placeholder={t("제목 (예: 아침 진행 보고)")} style={{ flex: 1, minWidth: '180px', width: 'auto' }} />
         </div>
-        <textarea value={text} onInput={e => setText(e.target.value)} rows={2} placeholder="요청 내용 (예: 어제까지의 진행 상황을 요약해 보고해줘)"
+        <textarea value={text} onInput={e => setText(e.target.value)} rows={2} placeholder={t("요청 내용 (예: 어제까지의 진행 상황을 요약해 보고해줘)")}
           style={{ width: '100%', marginTop: '8px', border: `1px solid ${C.border}`, borderRadius: '8px', padding: '10px 12px', fontSize: '13.5px', lineHeight: 1.5, outlineColor: C.cta, resize: 'vertical' }} />
         <div style={{ display: 'flex', gap: '20px', flexWrap: 'wrap', marginTop: '10px', alignItems: 'flex-end' }}>
           <div>
-            <div style={lbl}>대상</div>
+            <div style={lbl}>{t('대상')}</div>
             <div style={{ display: 'flex', gap: '5px', flexWrap: 'wrap' }}>
               <SegPill small active={target === 'main'} onClick={() => setTarget('main')}>{targetName('main')}</SegPill>
               {store.agents.filter(a => a.kind === 'sub').map(a => (
@@ -86,16 +86,16 @@ function SchedulesCard() {
             </div>
           </div>
           <div>
-            <div style={lbl}>반복</div>
+            <div style={lbl}>{t('반복')}</div>
             <div style={{ display: 'flex', gap: '5px' }}>
-              {[['once', '1회'], ['daily', '매일'], ['weekly', '매주']].map(([k, l]) => (
+              {[['once', t('1회')], ['daily', t('매일')], ['weekly', t('매주')]].map(([k, l]) => (
                 <SegPill key={k} small active={repeat === k} onClick={() => setRepeat(k)}>{l}</SegPill>
               ))}
             </div>
           </div>
           {repeat === 'weekly' && (
             <div>
-              <div style={lbl}>요일</div>
+              <div style={lbl}>{t('요일')}</div>
               <div style={{ display: 'flex', gap: '4px' }}>
                 {WEEKDAYS.map((w, i) => <SegPill key={i} small active={weekday === i} onClick={() => setWeekday(i)}>{w}</SegPill>)}
               </div>
@@ -103,18 +103,18 @@ function SchedulesCard() {
           )}
           {repeat === 'once' ? (
             <div>
-              <div style={lbl}>실행 일시</div>
+              <div style={lbl}>{t('실행 일시')}</div>
               <input type="datetime-local" value={runAt} onInput={e => setRunAt(e.target.value)}
                 style={{ border: `1px solid ${C.border}`, borderRadius: '4px', padding: '8px 10px', fontSize: '13px', outlineColor: C.cta }} />
             </div>
           ) : (
             <div>
-              <div style={lbl}>시간</div>
+              <div style={lbl}>{t('시간')}</div>
               <input type="time" value={atTime} onInput={e => setAtTime(e.target.value)}
                 style={{ border: `1px solid ${C.border}`, borderRadius: '4px', padding: '8px 10px', fontSize: '13px', outlineColor: C.cta }} />
             </div>
           )}
-          <Btn variant="primary" onClick={add}>등록</Btn>
+          <Btn variant="primary" onClick={add}>{t('등록')}</Btn>
         </div>
       </div>
     </section>
@@ -235,8 +235,8 @@ export function SettingsScreen() {
     <div style={{ maxWidth: '760px', margin: '0 auto', display: 'flex', flexDirection: 'column', gap: '16px' }}>
       {/* 서비스 연결 */}
       <section style={card({ padding: '24px' })}>
-        <div style={label12}>서비스 연결</div>
-        <div style={{ fontSize: '13px', color: C.t58, marginTop: '4px' }}>동일한 Deskmate 서비스를 연결하고 사이드 패널 상단에서 전환할 수 있습니다.</div>
+        <div style={label12}>{t('서비스 연결')}</div>
+        <div style={{ fontSize: '13px', color: C.t58, marginTop: '4px' }}>{t('동일한 Deskmate 서비스를 연결하고 사이드 패널 상단에서 전환할 수 있습니다.')}</div>
         <div style={{ display: 'flex', flexDirection: 'column', gap: '8px', marginTop: '16px' }}>
           {services.map(sv => {
             const isCur = sv.url === currentBase();
@@ -258,10 +258,10 @@ export function SettingsScreen() {
                   <div style={{ fontSize: '12.5px', color: C.t58 }}>{sv.url}</div>
                 </div>
                 {editUrl !== sv.url && (
-                  <Btn variant="darkOutline" small onClick={() => { setEditUrl(sv.url); setNameDraft(sv.name); }}>이름 변경</Btn>
+                  <Btn variant="darkOutline" small onClick={() => { setEditUrl(sv.url); setNameDraft(sv.name); }}>{t('이름 변경')}</Btn>
                 )}
                 {isCur ? (
-                  <Chip bg={C.mint} color={C.heading} style={{ fontSize: '12px', padding: '4px 12px' }}>현재 연결됨</Chip>
+                  <Chip bg={C.mint} color={C.heading} style={{ fontSize: '12px', padding: '4px 12px' }}>{t('현재 연결됨')}</Chip>
                 ) : (
                   <>
                     <Btn variant="outline" small onClick={() => switchService(sv.url)}>이 서비스로 전환</Btn>
@@ -275,7 +275,7 @@ export function SettingsScreen() {
         <div style={{ display: 'flex', gap: '10px', marginTop: '14px', flexWrap: 'wrap' }}>
           <Input value={newSvc} onInput={e => setNewSvc(e.target.value)} onKeyDown={e => { if (e.key === 'Enter') addService(); }}
             placeholder="http://localhost:3201" style={{ flex: 1, minWidth: '200px', width: 'auto' }} />
-          <Btn variant="primary" onClick={addService}>연결</Btn>
+          <Btn variant="primary" onClick={addService}>{t('연결')}</Btn>
         </div>
       </section>
 
@@ -304,11 +304,11 @@ export function SettingsScreen() {
 
       {/* 메뉴 표시 */}
       <section style={card({ padding: '24px' })}>
-        <div style={label12}>메뉴 표시</div>
+        <div style={label12}>{t('메뉴 표시')}</div>
         <div style={{ display: 'flex', alignItems: 'center', gap: '12px', marginTop: '14px', flexWrap: 'wrap' }}>
           <div style={{ flex: 1, minWidth: '200px' }}>
             <div style={{ fontSize: '14px', fontWeight: 600 }}>Git</div>
-            <div style={{ fontSize: '12.5px', color: C.t58, marginTop: '2px' }}>끄면 사이드패널에서만 숨겨지고, Git 연동·커밋 기록 등 실제 동작은 그대로 유지됩니다.</div>
+            <div style={{ fontSize: '12.5px', color: C.t58, marginTop: '2px' }}>{t('끄면 사이드패널에서만 숨겨지고, Git 연동·커밋 기록 등 실제 동작은 그대로 유지됩니다.')}</div>
             {store.caps?.git === false && <div style={{ fontSize: '12px', color: C.danger, marginTop: '4px', fontWeight: 600 }}>⚠ 서버에 git이 설치되어 있지 않아 Git 메뉴가 비활성화됐습니다. git 설치 후 재시작하면 사용할 수 있습니다.</div>}
           </div>
           <div onClick={() => api.post('/settings/git-menu', { show: !store.show_git_menu }).catch(e => showToast(e.message))}
@@ -340,7 +340,7 @@ export function SettingsScreen() {
 
       {/* 위험 구역 — 기억/데이터 초기화 */}
       <section style={card({ padding: '24px', border: '1px solid rgba(200,32,20,0.35)' })}>
-        <div style={{ ...label12, color: C.danger }}>위험 구역</div>
+        <div style={{ ...label12, color: C.danger }}>{t('위험 구역')}</div>
         <div style={{ display: 'flex', alignItems: 'center', gap: '12px', marginTop: '12px', flexWrap: 'wrap' }}>
           <div style={{ flex: 1, minWidth: '220px' }}>
             <div style={{ fontSize: '14px', fontWeight: 600 }}>{t('전체 기억 초기화')}</div>
@@ -358,18 +358,18 @@ export function SettingsScreen() {
         </div>
         <div style={{ display: 'flex', alignItems: 'center', gap: '12px', marginTop: '16px', flexWrap: 'wrap', borderTop: `1px solid ${C.line}`, paddingTop: '16px' }}>
           <div style={{ flex: 1, minWidth: '220px' }}>
-            <div style={{ fontSize: '14px', fontWeight: 600 }}>전체 데이터 초기화</div>
+            <div style={{ fontSize: '14px', fontWeight: 600 }}>{t('전체 데이터 초기화')}</div>
             <div style={{ fontSize: '12.5px', color: C.t58, marginTop: '2px' }}>
-              대화·요청·티켓·승인·타임라인·팀원 구성·워크스페이스(Git 포함)를 모두 삭제하고 처음 상태로 되돌립니다.
+              {t('대화·요청·티켓·승인·타임라인·팀원 구성·워크스페이스(Git 포함)를 모두 삭제하고 처음 상태로 되돌립니다.')}
             </div>
           </div>
-          <Btn variant="danger" onClick={() => { setResetText(''); setResetOpen(true); }}>초기화</Btn>
+          <Btn variant="danger" onClick={() => { setResetText(''); setResetOpen(true); }}>{t('초기화')}</Btn>
         </div>
       </section>
 
       {resetOpen && (
         <Modal onClose={() => setResetOpen(false)} maxWidth="460px">
-          <div style={{ fontSize: '18px', fontWeight: 600, color: C.danger }}>전체 데이터 초기화</div>
+          <div style={{ fontSize: '18px', fontWeight: 600, color: C.danger }}>{t('전체 데이터 초기화')}</div>
           <div style={{ fontSize: '14px', lineHeight: 1.6, marginTop: '12px' }}>
             이 서비스({store.service.name})의 모든 데이터가 삭제됩니다:
           </div>

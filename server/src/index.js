@@ -92,6 +92,13 @@ app.use((req, res, next) => {
 // IP 대역 게이트 — CIDR 밖 요청은 전부 403 (정적 포함)
 app.use((req, res, next) => {
   if (ipAllowed(req.socket.remoteAddress)) return next();
+  // 차단된 출발 IP를 로그로 — --allow 대역 설정 실수를 바로 알 수 있게 (IP당 1회)
+  const dip = String(req.socket.remoteAddress || '').replace(/^::ffff:/, '');
+  if (!globalThis.__deniedIps) globalThis.__deniedIps = new Set();
+  if (!globalThis.__deniedIps.has(dip) && globalThis.__deniedIps.size < 50) {
+    globalThis.__deniedIps.add(dip);
+    console.warn(`[deskmate] 접근 차단: ${dip} — --allow 대역(${process.env.ALLOW_CIDR}) 밖입니다. 이 IP를 허용하려면 대역을 추가하세요.`);
+  }
   res.status(403).send('forbidden');
 });
 

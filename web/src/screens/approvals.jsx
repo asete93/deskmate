@@ -115,8 +115,8 @@ export function ApprovalsScreen() {
 
       {tab === 'pending' && pending.length === 0 && (
         <section style={card({ padding: '40px', textAlign: 'center' })}>
-          <div style={{ fontSize: '16px', fontWeight: 600, color: C.heading }}>대기 중인 결재가 없습니다</div>
-          <div style={{ fontSize: '13.5px', color: C.t58, marginTop: '6px' }}>{leadName}이(가) 팀원 고용·해고나 대표 결정이 필요한 사안을 올리면 여기에 표시됩니다.</div>
+          <div style={{ fontSize: '16px', fontWeight: 600, color: C.heading }}>{t('대기 중인 결재가 없습니다')}</div>
+          <div style={{ fontSize: '13.5px', color: C.t58, marginTop: '6px' }}>{leadName}{t('이(가) 팀원 고용·해고나 대표 결정이 필요한 사안을 올리면 여기에 표시됩니다.')}</div>
         </section>
       )}
       {tab === 'pending' && pending.map(ap => <PendingCard key={ap.id} ap={ap} leadName={leadName} />)}

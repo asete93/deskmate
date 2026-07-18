@@ -4,6 +4,7 @@ import { store, showToast } from '../store.js';
 import { api, currentBase } from '../api.js';
 import { C, card, Btn, Chip, fmtDateTime } from '../ui.jsx';
 import { ReportModal } from './report.jsx';
+import { t } from '../i18n.js';
 
 // 보고서 관리 — 전체 산출 보고서 목록·열람·내보내기·삭제
 export function ReportsScreen({ param }) {
@@ -26,7 +27,7 @@ export function ReportsScreen({ param }) {
 
   return (
     <div style={{ maxWidth: '860px', margin: '0 auto', display: 'flex', flexDirection: 'column', gap: '12px' }}>
-      <div style={{ fontSize: '13px', color: C.t58 }}>팀이 작성한 산출 보고서 {reports.length}건 — 열람·내보내기·삭제할 수 있습니다.</div>
+      <div style={{ fontSize: '13px', color: C.t58 }}>{t('팀이 작성한 산출 보고서')} {reports.length} — {t('열람·내보내기·삭제할 수 있습니다.')}</div>
       {reports.length === 0 && (
         <section style={card({ padding: '40px', textAlign: 'center' })}>
           <div style={{ fontSize: '16px', fontWeight: 600, color: C.heading }}>아직 보고서가 없습니다</div>
@@ -42,10 +43,10 @@ export function ReportsScreen({ param }) {
           </div>
           <div style={{ fontSize: '12.5px', color: C.t58, marginTop: '4px' }}>{r.report.subtitle} · 작성 {r.report.author || '팀장'}</div>
           <div style={{ display: 'flex', gap: '8px', marginTop: '12px', flexWrap: 'wrap' }}>
-            <Btn variant="primary" small onClick={() => setOpenId(r.id)}>열람</Btn>
+            <Btn variant="primary" small onClick={() => setOpenId(r.id)}>{t('열람')}</Btn>
             <Btn variant="outline" small onClick={() => download(r.id, 'pptx')}>PPTX</Btn>
             <Btn variant="outline" small onClick={() => download(r.id, 'xlsx')}>Excel</Btn>
-            <Btn variant="danger" small style={{ marginLeft: 'auto' }} onClick={() => remove(r.id)}>삭제</Btn>
+            <Btn variant="danger" small style={{ marginLeft: 'auto' }} onClick={() => remove(r.id)}>{t('삭제')}</Btn>
           </div>
         </section>
       ))}

@@ -64,7 +64,7 @@ export function CfgPanel({ agent, small }) {
       </div>
       <div>
         <div style={{ fontSize: '11px', fontWeight: 600, letterSpacing: '0.08em', color: C.t58, marginBottom: '6px' }}>
-          MODEL{agent.provider && <Chip bg={C.goldLight} color={C.goldText} style={{ marginLeft: '6px' }}>{agent.provider === 'openai' ? 'Codex 연동' : `${agent.provider} 연동`}</Chip>}
+          MODEL{agent.provider && <Chip bg={C.goldLight} color={C.goldText} style={{ marginLeft: '6px' }}>{agent.provider === 'openai' ? `Codex ${t('연동')}` : `${agent.provider} ${t('연동')}`}</Chip>}
         </div>
         <div style={{ display: 'flex', gap: '5px', flexWrap: 'wrap' }}>
           {(agent.provider ? providerModelOptions(agent.provider) : modelOptions()).map(mo =>
@@ -273,7 +273,7 @@ export function SubsScreen({ param, openAi }) {
               <div style={{ display: 'flex', gap: '6px', flexWrap: 'wrap' }}>
                 <Chip bg={C.ceramic} color={C.t58} style={{ fontWeight: 600 }}>{modelLabel(sc.model)}</Chip>
                 <Chip bg={C.ceramic} color={C.t58} style={{ fontWeight: 600 }}>effort: {sc.effort}</Chip>
-                {sc.provider && <Chip bg={C.goldLight} color={C.goldText}>{PROVIDER_LABEL[sc.provider]} 연동</Chip>}
+                {sc.provider && <Chip bg={C.goldLight} color={C.goldText}>{PROVIDER_LABEL[sc.provider]} {t('연동')}</Chip>}
               </div>
               <div style={{ background: '#f9f9f9', borderRadius: '8px', padding: '10px 12px', fontSize: '13px', lineHeight: 1.5 }}>
                 <span style={{ fontWeight: 600, color: C.heading }}>현재 작업 · </span>{sc.current_task || '대기 중'}

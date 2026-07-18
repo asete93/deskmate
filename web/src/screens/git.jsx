@@ -257,7 +257,7 @@ export function GitScreen() {
             )}
           </div>
           <span style={{ fontSize: '12.5px', fontWeight: 600, color: C.t58, background: C.ceramic, borderRadius: '50px', padding: '4px 12px' }}>{curBranch?.commits ?? '-'} commits</span>
-          <span style={{ marginLeft: 'auto', fontSize: '12px', color: C.t58 }}>커밋을 선택하면 아래에 상세가 표시됩니다</span>
+          <span style={{ marginLeft: 'auto', fontSize: '12px', color: C.t58 }}>{t('커밋을 선택하면 아래에 상세가 표시됩니다')}</span>
         </div>
         <div style={{ maxHeight: '24vh', overflowY: 'auto' }}>
           {graph.map(gr => {
@@ -286,8 +286,8 @@ export function GitScreen() {
           <span style={{ fontSize: '12.5px', color: C.t58 }}>{sel ? `${sel.author} · ${fmtTime(sel.ts)}` : ''}</span>
         </div>
         <div style={{ display: 'flex', gap: '8px', marginBottom: '16px' }}>
-          <div onClick={() => setTab('changes')} style={tabStyle(tab === 'changes')}>변경 파일 이력</div>
-          <div onClick={() => setTab('tree')} style={tabStyle(tab === 'tree')}>파일 트리</div>
+          <div onClick={() => setTab('changes')} style={tabStyle(tab === 'changes')}>{t('변경 파일 이력')}</div>
+          <div onClick={() => setTab('tree')} style={tabStyle(tab === 'tree')}>{t('파일 트리')}</div>
         </div>
 
         {tab === 'changes' && diff && (
@@ -321,7 +321,7 @@ export function GitScreen() {
 
         {tab === 'tree' && (
           <>
-            <div style={{ fontSize: '12px', color: C.t58, marginBottom: '10px', flexShrink: 0 }}>{selSha?.slice(0, 7)} 커밋 시점의 소스 원본입니다. 이후 커밋에서 추가된 파일은 보이지 않습니다.</div>
+            <div style={{ fontSize: '12px', color: C.t58, marginBottom: '10px', flexShrink: 0 }}>{selSha?.slice(0, 7)}  {t('커밋 시점의 소스 원본입니다. 이후 커밋에서 추가된 파일은 보이지 않습니다.')}</div>
             <div style={{ display: 'flex', gap: '16px', flex: 1, minHeight: 0 }}>
               <div style={{ flex: 1, minWidth: '230px', maxWidth: '320px', background: '#f9f9f9', border: `1px solid ${C.line}`, borderRadius: '8px', padding: '10px', overflowY: 'auto' }}>
                 {buildTreeRows(tree)
