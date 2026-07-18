@@ -175,6 +175,11 @@ export function Linkify({ text, light = false }) {
     : p)));
 }
 
+// 즉시 피드백용 미니 스피너 — 클릭 후 서버 반영까지의 공백을 메운다
+export function Spin({ size = 12, color = '#00754a', track = 'rgba(0,0,0,0.15)' }) {
+  return h('span', { style: { width: `${size}px`, height: `${size}px`, border: `2px solid ${track}`, borderTopColor: color, borderRadius: '50%', display: 'inline-block', animation: 'cc-spin 0.7s linear infinite', verticalAlign: '-2px' } });
+}
+
 export const dotStyle = (color, size = 8, pulse = false) => ({
   width: `${size}px`, height: `${size}px`, borderRadius: '50%', background: color,
   flexShrink: 0, display: 'inline-block',

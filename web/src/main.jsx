@@ -208,19 +208,26 @@ function Sidebar({ screen, badges }) {
 }
 
 function MobileTabs({ screen, badges }) {
+  // 항목이 넘치면 좌우 스와이프(가로 스크롤)로 확장
+  const items = [...orderedNav(), SETTINGS_ITEM];
   return (
-    <nav style={{ position: 'fixed', bottom: 0, left: 0, right: 0, zIndex: 50, background: '#fff', boxShadow: '0 -1px 3px rgba(0,0,0,0.10), 0 -2px 2px rgba(0,0,0,0.06)', display: 'flex', padding: '6px 4px calc(6px + env(safe-area-inset-bottom)) 4px' }}>
-      {[...orderedNav(), SETTINGS_ITEM].map(n => {
+    <nav style={{ position: 'fixed', bottom: 0, left: 0, right: 0, zIndex: 50, background: '#fff', boxShadow: '0 -1px 3px rgba(0,0,0,0.10), 0 -2px 2px rgba(0,0,0,0.06)', display: 'flex', padding: '6px 4px calc(6px + env(safe-area-inset-bottom)) 4px', overflowX: 'auto', WebkitOverflowScrolling: 'touch', scrollbarWidth: 'none' }}>
+      {items.map(n => {
         const active = screen === n.key;
         const badge = navBadge(n, badges);
         return (
-          <div key={n.key} onClick={() => nav(n.key)} style={{ flex: 1, display: 'flex', flexDirection: 'column', alignItems: 'center', gap: '3px', padding: '6px 0', cursor: 'pointer', fontSize: '10.5px', fontWeight: 600, color: active ? C.heading : C.t58, position: 'relative' }}>
+          <div key={n.key} onClick={() => nav(n.key)} style={{ flex: `1 0 ${Math.max(58, Math.floor(100 / (items.length + 1)))}px`, minWidth: '58px', display: 'flex', flexDirection: 'column', alignItems: 'center', gap: '3px', padding: '6px 0', cursor: 'pointer', fontSize: '10.5px', fontWeight: 600, color: active ? C.heading : C.t58, position: 'relative' }}>
             {n.icon(20)}
-            <span>{t(n.mLabel)}</span>
+            <span style={{ whiteSpace: 'nowrap' }}>{t(n.mLabel)}</span>
             {badge.n > 0 && <Badge n={badge.n} tone={badge.tone} style={{ position: 'absolute', top: 0, right: 'calc(50% - 20px)', fontSize: '9.5px', padding: '0 5px' }} />}
           </div>
         );
       })}
+      {/* 사용량 — 플로팅 아이콘 대신 탭으로 */}
+      <div onClick={() => window.dispatchEvent(new CustomEvent('cc-usage-toggle'))} style={{ flex: '1 0 58px', minWidth: '58px', display: 'flex', flexDirection: 'column', alignItems: 'center', gap: '3px', padding: '6px 0', cursor: 'pointer', fontSize: '10.5px', fontWeight: 600, color: C.t58 }}>
+        <svg width="20" height="20" viewBox="0 0 24 24" fill="none" stroke="currentColor" stroke-width="2" stroke-linecap="round" stroke-linejoin="round"><path d="M12 20V10" /><path d="M18 20V4" /><path d="M6 20v-4" /></svg>
+        <span style={{ whiteSpace: 'nowrap' }}>{t('사용량')}</span>
+      </div>
     </nav>
   );
 }
@@ -246,6 +253,12 @@ function UsageWidget() {
     return () => clearInterval(t);
   }, [on]);
   const setOpen = (v) => { setOn(v); localStorage.setItem('cc_usage_widget', v ? '1' : '0'); if (v) loadUsage(); };
+  // 모바일 하단 탭의 "사용량" 버튼 → 토글
+  useEffect(() => {
+    const onToggle = () => setOpen(!(localStorage.getItem('cc_usage_widget') === '1'));
+    window.addEventListener('cc-usage-toggle', onToggle);
+    return () => window.removeEventListener('cc-usage-toggle', onToggle);
+  }, []);
   const limits = Array.isArray(store.usage.limits) ? store.usage.limits : [];
   const today = store.usage.today || {};
   const plan = store.usage.plan;
@@ -254,6 +267,7 @@ function UsageWidget() {
   const fixedBottom = window.innerWidth < 840 ? 'calc(72px + env(safe-area-inset-bottom))' : '18px';
 
   if (!on) {
+    if (window.innerWidth < 840) return null; // 모바일: 플로팅 아이콘 없음 — 하단 탭에서 열기
     // 비활성: 아이콘만
     return (
       <div onClick={() => setOpen(true)} title="Claude 사용량 모니터"
@@ -538,16 +552,17 @@ function App() {
     <div style={{ display: 'flex', minHeight: '100vh', background: C.cream }}>
       {!isMobile && <Sidebar screen={r.screen} badges={badges} />}
       <div style={{ flex: 1, display: 'flex', flexDirection: 'column', minWidth: 0 }}>
-        <header style={{ position: 'sticky', top: 0, zIndex: 40, background: '#fff', boxShadow: '0 1px 3px rgba(0,0,0,0.10), 0 2px 2px rgba(0,0,0,0.06)', padding: '0 24px', height: '64px', display: 'flex', alignItems: 'center', gap: '12px' }}>
-          <div style={{ fontSize: '19px', fontWeight: 600, color: C.heading }}>{t(navItem?.title)}</div>
-          {isMobile && <ServiceSwitcher mobile />}
-          <div style={{ marginLeft: isMobile ? '8px' : 'auto', display: 'flex', alignItems: 'center', gap: '8px', background: C.mint, borderRadius: '50px', padding: '5px 14px', flexShrink: 0 }}>
-            <span style={dotStyle(C.cta, 7, true)} />
-            <span style={{ fontSize: '13px', fontWeight: 600, color: C.heading, whiteSpace: 'nowrap' }}>{t('실행 중')} · {activeCount} agents</span>
-          </div>
-        </header>
+        {!isMobile && (
+          <header style={{ position: 'sticky', top: 0, zIndex: 40, background: '#fff', boxShadow: '0 1px 3px rgba(0,0,0,0.10), 0 2px 2px rgba(0,0,0,0.06)', padding: '0 24px', height: '64px', display: 'flex', alignItems: 'center', gap: '12px' }}>
+            <div style={{ fontSize: '19px', fontWeight: 600, color: C.heading }}>{t(navItem?.title)}</div>
+            <div style={{ marginLeft: 'auto', display: 'flex', alignItems: 'center', gap: '8px', background: C.mint, borderRadius: '50px', padding: '5px 14px', flexShrink: 0 }}>
+              <span style={dotStyle(C.cta, 7, true)} />
+              <span style={{ fontSize: '13px', fontWeight: 600, color: C.heading, whiteSpace: 'nowrap' }}>{t('실행 중')} · {activeCount} agents</span>
+            </div>
+          </header>
+        )}
         <main style={{ flex: 1, padding: isMobile
-          ? '16px 14px 82px'
+          ? '12px 12px 80px'
           // 채팅류 화면은 하단 여백 없이 페이지 끝까지 — 대화 영역 최대화
           : (r.screen === 'chat' || r.screen === 'requests' || r.screen === 'terminal' || r.screen === 'files' || r.screen === 'review' || (r.screen === 'subs' && r.param) ? '24px 24px 24px' : '24px 24px 120px'),
           maxWidth: (r.screen === 'terminal' || r.screen === 'files' || r.screen === 'review') ? 'none' : '1240px', width: '100%', margin: '0 auto' }}>

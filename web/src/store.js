@@ -135,9 +135,15 @@ export function connectWs() {
     } else if (type === 'threads') {
       store.threads = payload;
     } else if (type === 'thread_cleared') {
-      // 방 대화 초기화 — 로컬 캐시도 비움
-      store.messages[payload.channel] = [];
-      if (store.allChat) store.allChat = store.allChat.filter(m => m.channel !== payload.channel);
+      if (payload.keepPending) {
+        // 내용만 지우기 — 미답변 카드는 남으므로 서버에서 다시 로드
+        api.get(`/chat/${encodeURIComponent(payload.channel)}`).then(ms => { store.messages[payload.channel] = ms; emit(); }).catch(() => {});
+        if (store.allChat) store.allChat = store.allChat.filter(m => m.channel !== payload.channel || !m.answered && ['choice', 'form', 'artifact', 'diff'].includes(m.kind));
+      } else {
+        // 방 대화 초기화 — 로컬 캐시도 비움
+        store.messages[payload.channel] = [];
+        if (store.allChat) store.allChat = store.allChat.filter(m => m.channel !== payload.channel);
+      }
     } else if (type === 'settings') {
       Object.assign(store, { goal: payload.goal, goal_history: payload.goal_history || store.goal_history, mode: payload.mode, lang: payload.lang || store.lang, progress: payload.progress, notif_channels: payload.notif_channels, nav_order: payload.nav_order ?? store.nav_order, show_git_menu: payload.show_git_menu === true, terminal_enabled: !!payload.terminal_enabled, files_enabled: payload.files_enabled === true });
     } else if (type === 'claude_md') {

@@ -30,7 +30,7 @@ function PendingCard({ ap, leadName }) {
       <div style={{ display: 'flex', alignItems: 'center', gap: '10px', flexWrap: 'wrap' }}>
         <Chip bg={b.bg} color={b.color} style={{ fontSize: '12px', padding: '4px 12px' }}>{b.text}</Chip>
         <span style={{ fontSize: '17px', fontWeight: 600, color: C.heading }}>{ap.target.name}</span>
-        {ap.target.role && <Chip bg={C.ceramic} color={C.t58} style={{ fontWeight: 600 }}>{ap.target.role}</Chip>}
+        {ap.target.role && <Chip bg={C.ceramic} color={C.t58} style={{ fontWeight: 600, whiteSpace: 'normal', lineHeight: 1.5, maxWidth: '100%' }}>{ap.target.role}</Chip>}
         <span style={{ marginLeft: 'auto', fontSize: '12.5px', color: C.t58 }}>{fmtDateTime(ap.created_ts)}</span>
       </div>
 
@@ -45,7 +45,7 @@ function PendingCard({ ap, leadName }) {
             스펙 — {leadName} 제안: {modelLabel(ap.target.model || 'sonnet')} · {ap.target.effort || 'medium'}
             {adjusted && <span style={{ color: C.goldText, marginLeft: '8px' }}>(조정됨)</span>}
           </div>
-          <div style={{ display: 'flex', gap: '18px', flexWrap: 'wrap' }}>
+          <div style={{ display: 'flex', flexDirection: 'column', gap: '12px' }}>
             <div>
               <div style={{ fontSize: '11px', fontWeight: 600, color: C.t58, marginBottom: '6px' }}>MODEL</div>
               <div style={{ display: 'flex', gap: '5px', flexWrap: 'wrap' }}>

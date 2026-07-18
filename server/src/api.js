@@ -74,7 +74,8 @@ export function createApi({ db, bus, manager, gitApi, uploadsDir, auth, termHub,
     ok(res, m);
   }));
   r.post('/chat/:channel', guard((req, res) => ok(res,
-    manager.sendChat(req.params.channel, String(req.body.text || '').trim(), Array.isArray(req.body.attachments) ? req.body.attachments : [], req.body.target || null))));
+    manager.sendChat(req.params.channel, String(req.body.text || '').trim(), Array.isArray(req.body.attachments) ? req.body.attachments : [], req.body.target || null,
+      Array.isArray(req.body.pastes) ? req.body.pastes.slice(0, 10).map(x => ({ text: String(x?.text || '').slice(0, 200_000), lines: Number(x?.lines) || String(x?.text || '').split('\n').length })) : []))));
   // 팀원 추가: provider 있으면 외부 AI 연동, 없으면 대표 권한 직접 고용 (둘 다 결재 절차 없음)
   r.post('/agents', guard((req, res) => {
     const { provider, name, role, model, effort, prompt } = req.body || {};
@@ -156,7 +157,7 @@ export function createApi({ db, bus, manager, gitApi, uploadsDir, auth, termHub,
   r.post('/lang', guard((req, res) => { manager.setLang(String(req.body.lang)); ok(res); }));
   r.post('/agents/:id/config', guard((req, res) => {
     const patch = {};
-    for (const k of ['model', 'effort', 'name', 'role', 'prompt']) if (req.body[k] != null) patch[k] = String(req.body[k]);
+    for (const k of ['model', 'effort', 'name', 'role', 'prompt', 'avatar']) if (req.body[k] != null) patch[k] = String(req.body[k]).slice(0, k === 'avatar' ? 4 : 4000);
     manager.setAgentConfig(Number(req.params.id), patch);
     ok(res);
   }));
@@ -170,7 +171,7 @@ export function createApi({ db, bus, manager, gitApi, uploadsDir, auth, termHub,
   r.post('/threads', guard((req, res) => ok(res, manager.createThread(req.body?.title))));
   r.delete('/threads/:channel', guard((req, res) => { manager.deleteThread(req.params.channel); ok(res); }));
   r.post('/threads/:channel/rename', guard((req, res) => { manager.renameThread(req.params.channel, req.body?.title); ok(res); }));
-  r.post('/threads/:channel/clear', guard((req, res) => { manager.clearThread(req.params.channel); ok(res); }));
+  r.post('/threads/:channel/clear', guard((req, res) => { manager.clearThread(req.params.channel, { memory: req.body?.memory !== false }); ok(res); }));
   // 방별 팀장 model/effort 오버라이드 (빈 값 = 기본값 따름)
   r.post('/threads/:channel/config', guard((req, res) => {
     manager.setThreadConfig(req.params.channel, { model: req.body?.model, effort: req.body?.effort });

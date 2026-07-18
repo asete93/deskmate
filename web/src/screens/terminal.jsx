@@ -270,7 +270,7 @@ export function TerminalScreen() {
   );
 
   return (
-    <div style={{ display: 'flex', flexDirection: 'column', gap: mobile ? '8px' : '0', height: mobile ? 'calc(100vh - 162px)' : 'calc(100vh - 112px)' }}>
+    <div style={{ display: 'flex', flexDirection: 'column', gap: mobile ? '8px' : '0', height: mobile ? 'calc(100dvh - 104px)' : 'calc(100vh - 112px)' }}>
       {/* 데스크탑은 상단 바 없이 터미널만 (분할/폰트/이동/닫기는 각 창 헤더에). 모바일만 세션 선택 바. */}
       {mobile && (
         <div style={{ display: 'flex', alignItems: 'center', gap: '4px' }}>

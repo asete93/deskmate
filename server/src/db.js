@@ -112,6 +112,8 @@ export function openDb(dataDir) {
   // 마이그레이션: 팀원별 커스텀 프롬프트(관리자 지정 추가 지침)
   try { db.exec("ALTER TABLE agents ADD COLUMN prompt TEXT DEFAULT ''"); } catch { /* 이미 존재 */ }
   try { db.exec("ALTER TABLE agents ADD COLUMN work_channel TEXT DEFAULT ''"); } catch { /* 이미 존재 */ }
+  try { db.exec("ALTER TABLE agents ADD COLUMN avatar TEXT DEFAULT ''"); } catch { /* 이미 존재 */ }
+  try { db.exec("ALTER TABLE tickets ADD COLUMN request_id INTEGER"); } catch { /* 이미 존재 */ }
   try { db.exec("ALTER TABLE threads ADD COLUMN model TEXT"); } catch { /* 이미 존재 */ }
   try { db.exec("ALTER TABLE threads ADD COLUMN effort TEXT"); } catch { /* 이미 존재 */ }
   try { db.exec("ALTER TABLE requests ADD COLUMN channel TEXT DEFAULT 'main'"); } catch { /* 이미 존재 */ }
@@ -157,7 +159,7 @@ function wrap(db) {
       return Number(r.lastInsertRowid);
     },
     updateAgent(id, patch) {
-      const cols = ['name', 'role', 'model', 'effort', 'status', 'provider', 'current_task', 'session_id', 'prompt', 'work_channel'];
+      const cols = ['name', 'role', 'model', 'effort', 'status', 'provider', 'current_task', 'session_id', 'prompt', 'work_channel', 'avatar'];
       const keys = Object.keys(patch).filter(k => cols.includes(k));
       if (!keys.length) return;
       db.prepare(`UPDATE agents SET ${keys.map(k => `${k}=?`).join(',')} WHERE id=?`).run(...keys.map(k => patch[k]), id);
@@ -248,10 +250,16 @@ function wrap(db) {
     },
     // ---- tickets ----
     insertTicket(t) {
-      const r = db.prepare(`INSERT INTO tickets(title,description,status,priority,assignee,history,created_ts,updated_ts)
-        VALUES(?,?,?,?,?,?,?,?)`).run(t.title, t.description || '', t.status || 'backlog', t.priority || 'P2',
-        t.assignee || '', J(t.history || []), now(), now());
+      const r = db.prepare(`INSERT INTO tickets(title,description,status,priority,assignee,history,request_id,created_ts,updated_ts)
+        VALUES(?,?,?,?,?,?,?,?,?)`).run(t.title, t.description || '', t.status || 'backlog', t.priority || 'P2',
+        t.assignee || '', J(t.history || []), t.request_id ?? null, now(), now());
       return Number(r.lastInsertRowid);
+    },
+    // REQ에 연결된 미완료 티켓 일괄 완료 (보고서 제출/REQ 종료 시 자동 전이)
+    completeTicketsForRequest(requestId, note) {
+      const rows = db.prepare("SELECT id FROM tickets WHERE request_id=? AND status!='done'").all(requestId);
+      for (const r of rows) this.updateTicket(r.id, { status: 'done' }, { ts: now(), actor: 'System', text: note || 'REQ 완료 — 자동 종결' });
+      return rows.length;
     },
     listTickets() {
       return db.prepare('SELECT * FROM tickets ORDER BY id').all().map(t => ({ ...t, history: P(t.history, []) }));
@@ -329,6 +337,10 @@ function wrap(db) {
       db.prepare('DELETE FROM messages WHERE channel=?').run(channel);
     },
     // 방 대화 내용 초기화 — 이력 삭제 (세션 리셋은 manager에서)
+    // 내용만 지우기 — 미답변 카드 메시지는 남긴다 (지우면 답변 불가 고아 카드가 됨)
+    clearThreadMessagesKeepPending(channel) {
+      db.prepare(`DELETE FROM messages WHERE channel=? AND id NOT IN (SELECT message_id FROM interactions WHERE status='pending')`).run(channel);
+    },
     clearThreadMessages(channel) {
       db.prepare('DELETE FROM messages WHERE channel=?').run(channel);
     },

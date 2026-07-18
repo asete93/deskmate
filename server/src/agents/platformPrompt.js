@@ -13,9 +13,11 @@
 // ═══════════════════════════════════════════════════════════════════
 
 const COMMON_RULES = `
-## 언어 (불변)
-**모든 발화는 첫 문장부터 끝까지 한국어로 작성하라.** 코드·명령어·파일명·기술 용어는 원문 그대로 두되,
-설명·보고·계획 서술을 영어로 시작하는 것은 금지다. 생각 정리 문장("I'll start by...")도 한국어로 써라.
+## 언어
+**기본 언어는 한국어다(사이트 설정 언어).** 첫 문장부터 한국어로 시작하라 — 생각 정리 문장("I'll start by...")도 한국어로.
+코드·명령어·파일명·기술 용어는 원문 그대로 둔다.
+예외: **역할(role)이나 커스텀 지침이 다른 언어 사용을 요구하는 팀원**(번역가, 영문 문서 작성 담당 등)은
+그 직무에 한해 해당 언어로 응답해도 된다.
 
 ## 행동 원칙 (불변)
 
@@ -209,7 +211,8 @@ ${roster}
   the team chat, or member conversations, search the full history with mcp__control__search_history(keyword).
   Never conclude "it never happened" just because it's not in your memory — search first.
 - **Progress**: mcp__control__report_progress
-- **Tickets**: mcp__control__upsert_ticket — break CEO requests down into tickets.
+- **Tickets**: a ticket is **auto-created and transitioned** per delegation (in_progress → review on member reply → done on REQ completion).
+  Use mcp__control__upsert_ticket only to adjust status/priority or register non-delegated work manually — never duplicate delegation tickets.
 - **Deliverable review by the CEO**: mcp__control__ask_artifact_review (blocking) — preview opens as a link popup.
   For an HTML file in the workspace always pass path (relative CSS/JS then works). Inline html strings are a last resort.
 - **Form input**: mcp__control__ask_form (blocking)
@@ -313,13 +316,14 @@ ${roster}
   결정이나 내용을 참조해야 하면 mcp__control__search_history(키워드)로 전체 이력을 검색하라.
   "이전에 정한 것"이 기억에 없다고 없는 일로 단정하지 마라 — 먼저 검색하라.
 - **진행률 보고**: mcp__control__report_progress
-- **티켓 관리**: mcp__control__upsert_ticket — 대표님의 요청은 티켓으로 분해해 관리한다.
+- **티켓 관리**: 위임(dispatch_task)마다 티켓이 **자동 생성·전이**된다 (진행 중 → 팀원 응답 시 검토 → REQ 완료 시 done).
+  mcp__control__upsert_ticket은 자동 티켓의 상태 조정·우선순위 지정·위임 없는 작업의 수동 등록에만 써라 — 위임 작업의 중복 생성 금지.
 - **산출물 대표님 검토**: mcp__control__ask_artifact_review (블로킹) — 미리보기는 링크 팝업으로 열린다.
   워크스페이스의 HTML 파일이면 반드시 path로 전달하라(상대 CSS/JS 정상 동작). html 문자열 인라인은 최후 수단.
 - **설정값 입력 요청**: mcp__control__ask_form (블로킹)
 - **선택지 질문**: 2개 이상 선택지를 제시하고 답을 받아야 하면 mcp__control__ask_choice (블로킹)
 - **요청 완료 보고서**: 요청(REQ) 처리 완료 시 mcp__control__submit_report로 산출 보고서를 등록한다.
-- 대표님에게는 한국어로 간결히 보고한다. 호칭은 반드시 "대표님"을 사용하라 ("사용자님" 금지).
+- 대표님 호칭은 반드시 "대표님"을 사용하라 ("사용자님" 금지).
 - **보고 형식 (강제)**: 채팅 본문은 **핵심 3~5문장**으로 끝내라. **10줄 또는 600자를 넘는 본문은 금지다** —
   넘칠 내용(표·긴 목록·검토 원문·분석 전문·단계별 상세)은 반드시 mcp__control__attach_detail(title, body)로
   먼저 등록하고, 본문에는 결론·추천·다음 행동과 "자세한 내용은 첨부 카드를 참조해 주세요" 안내만 써라.
@@ -361,9 +365,12 @@ export function buildMemberPrompt(agent, lang = 'ko') {
 - 브리프의 범위를 벗어나지 마라. 브리프가 모호하면 추측하지 말고 명확화를 요청하라.
 - 완료 기준(테스트 등)이 있으면 그것이 통과할 때까지가 네 작업이다.
 - 완료 보고에는 무엇을 바꿨는지, 무엇을 검증했는지, 무엇이 남았는지를 명시하라.
-- 한국어로 간결히 보고하라. 특히 대표님에게 직접 답할 때는 핵심 몇 문장으로 끝내라 — 긴 표·원문 나열 금지.
-- 첫 응답부터 한국어다. 작업 시작 선언("살펴보겠습니다" 등)도 반드시 한국어로.
-${custom}${COMMON_RULES}`;
+- 간결히 보고하라. 특히 대표님에게 직접 답할 때는 핵심 몇 문장으로 끝내라 — 긴 표·원문 나열 금지.
+${custom}${COMMON_RULES}
+
+## 최종 확인 (매 응답 전 스스로 점검)
+너의 역할·커스텀 지침에 다른 언어 요구가 없다면, 응답은 **첫 단어부터 한국어**여야 한다.
+코드·명령어·파일명·기술 용어만 원문을 유지한다. (번역 등 언어 직무 팀원은 직무 언어로 응답 가능)`;
 }
 
 // UI 노출용 (읽기전용 "플랫폼 지침 보기")

@@ -80,11 +80,18 @@ export function createSdkDriver(ctx) {
           const room = entry.channel || 'main'; // 위임 대화는 발원한 방에 그대로 표시
           ctx.postMessage({ channel: room, request_id: reqId, from_actor: 'Main', to_actor: sub.name, kind: 'text', content: { text: task } });
           ctx.setAgentStatus(sub.id, 'working', task.slice(0, 60), room);
+          // 업무 흐름 자동 티켓: 위임 = 진행 중 티켓 생성 → 응답 = 검토 → REQ 완료 = 자동 done
+          const tktTitle = task.split('\n').map(l => l.replace(/^#+\s*/, '').replace(/[*_\`]/g, '').trim()).find(Boolean)?.slice(0, 60) || '위임 작업';
+          const tktId = ctx.upsertTicket(
+            { title: tktTitle, status: 'in_progress', assignee: sub.name, description: task.slice(0, 500), request_id: reqId },
+            { ts: Date.now(), actor: 'System', text: `팀장 → ${sub.name} 위임 (자동 생성)` },
+          );
           const reply = await sendAndCollect(sub, task, reqId, room);
           // SDK 팀원은 스트리밍 게시(to Main)가 이미 채팅에 남는다 — 릴레이 중복 게시는 외부 AI(무스트리밍)만
           if (sub.provider) ctx.postMessage({ channel: room, request_id: reqId, from_actor: sub.name, to_actor: 'Main', kind: 'text', content: { text: reply } });
           ctx.setAgentStatus(sub.id, 'idle', '');
-          return { content: [{ type: 'text', text: `[${sub.name} 응답]\n${reply}` }] };
+          ctx.upsertTicket({ id: tktId, status: 'review' }, { ts: Date.now(), actor: 'System', text: `${sub.name} 응답 — 팀장 검토 대기` });
+          return { content: [{ type: 'text', text: `[${sub.name} 응답]\n${reply}\n\n(자동 티켓 TKT-${tktId}: 검토 대기 — 결과를 검증했으면 upsert_ticket으로 done 처리하거나, 보고서 제출 시 자동 완료된다)` }] };
         }),
         tool('open_request', '대표님 메시지를 새 요청(REQ)으로 분류한다. 기존 진행 건과 별개의 새 작업 요청일 때만 호출 — 후속 질문·정정·단순 문의에는 호출하지 마라.', {
           title: z.string().describe('요청 제목 (짧게)'),
@@ -500,7 +507,7 @@ export function createSdkDriver(ctx) {
       entry.replyTo = 'Main'; // 팀장 위임 턴 — 보고 수신자는 팀장
       entry.replyChannel = room; // 위임 대화는 발원한 방에 게시
       entry.pendingText = text;
-    }, text);
+    }, db.getSetting('lang', 'ko') === 'ko' ? `${text}\n\n[시스템: 역할상 다른 언어가 필요한 경우가 아니면 한국어로 보고하라]` : text);
   }
 
   // 실제 사용 가능 모델 목록 — 일회용 세션에서 supportedModels() 조회.

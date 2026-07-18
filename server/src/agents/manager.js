@@ -85,6 +85,11 @@ export function createManager({ db, bus, notify, workDir, uploadsDir, driverKind
       bus.tickets();
       return id;
     },
+    completeTicketsForRequest(requestId, note) {
+      const n = db.completeTicketsForRequest(requestId, note);
+      if (n) bus.tickets();
+      return n;
+    },
 
     addRequestUsage(requestId, tokensIn, tokensOut) {
       db.addRequestUsage(requestId, tokensIn, tokensOut);
@@ -123,6 +128,7 @@ export function createManager({ db, bus, notify, workDir, uploadsDir, driverKind
     completeRequest(requestId, status = 'done') {
       if (!requestId) return;
       db.updateRequest(requestId, status);
+      ctx.completeTicketsForRequest(requestId, `REQ-${requestId} ${status === 'done' ? '완료' : status} — 자동 종결`);
       bus.requests();
       if (status === 'done') {
         const r = db.getRequest(requestId);
@@ -175,8 +181,8 @@ export function createManager({ db, bus, notify, workDir, uploadsDir, driverKind
   // ---------- 사용자 액션 (routes에서 호출) ----------
   // channel: 'main'(팀장 1:1 비공개) | 'sub:N'(팀원 1:1 비공개) | 'team'(통합 팀 채팅 — 공개)
   // target: team 채널 전용 — 메시지를 받을 에이전트 ('main' | 'sub:N', 기본 팀장)
-  function sendChat(channel, text, attachments = [], target = null) {
-    if (!text && attachments.length) text = '(파일 전달)';
+  function sendChat(channel, text, attachments = [], target = null, pastes = []) {
+    if (!text && (attachments.length || pastes.length)) text = text || '(자료 전달)';
     // "@이름 메시지" — 이름으로 에이전트 지목
     const at = text.match(/^@(\S+)\s+([\s\S]+)/);
     const atAgent = at ? db.listAgents().find(a => a.name === at[1]) : null;
@@ -201,7 +207,7 @@ export function createManager({ db, bus, notify, workDir, uploadsDir, driverKind
     const posted = ctx.postMessage({
       channel, request_id: requestId,
       from_actor: 'User', to_actor: toMain ? 'Main' : agent.name,
-      kind: 'text', content: { text, ...(attachments.length ? { attachments } : {}) },
+      kind: 'text', content: { text, ...(attachments.length ? { attachments } : {}), ...(pastes.length ? { pastes } : {}) },
     });
     if (toMain) ctx.lastUserMsgByChannel[channel] = posted.id;
     bus.event('User', 'user', toMain ? `${agent.name}에게 요청 — "${text.slice(0, 40)}"` : `${agent.name}에게 직접 문의`);
@@ -210,6 +216,10 @@ export function createManager({ db, bus, notify, workDir, uploadsDir, driverKind
     if (toMain && db.getSetting('goal_dirty', false)) {
       db.setSetting('goal_dirty', false);
       outText = `[시스템 노트: 전체 목표가 다음으로 변경되었다 — "${db.getSetting('goal', '')}". 이 요청을 처리할 때 참고하라.]\n\n${text}`;
+    }
+    // 붙여넣은 긴 텍스트 — 채팅엔 칩으로 요약 표시되고, 에이전트에게는 원문 전체 전달
+    for (let i = 0; i < pastes.length; i++) {
+      outText += `\n\n[대표님이 붙여넣은 텍스트 ${i + 1} — ${pastes[i].lines}줄]\n${pastes[i].text}`;
     }
     // 첨부 파일: 워크스페이스 밖 절대경로 — Read 툴로 열람 (구조 분석/git에 안 섞임)
     if (attachments.length) {
@@ -397,8 +407,17 @@ export function createManager({ db, bus, notify, workDir, uploadsDir, driverKind
   }
 
   // 방 대화 초기화 — 이력 삭제 + 세션 리셋 (방 자체는 유지, 기본 방의 "삭제" 대안)
-  function clearThread(channel) {
+  // memory=false: 화면 정리용 — 메시지만 삭제(미답변 카드는 유지), 세션·기억·작업은 그대로
+  function clearThread(channel, { memory = true } = {}) {
     let label = channel;
+    if (!memory) {
+      const th = channel.startsWith('sub:') ? null : db.getThread(channel);
+      db.clearThreadMessagesKeepPending(channel);
+      bus.broadcast('thread_cleared', { channel, keepPending: true });
+      bus.event('User', 'user', `대화 내용 지우기 — ${th?.title || label} (기억 유지)`);
+      bus.toast('대화 내용을 지웠습니다. 팀장의 기억과 진행 중 작업은 유지됩니다.');
+      return;
+    }
     cancelPendingInteractions(channel);
     if (channel.startsWith('sub:')) {
       // 팀원 1:1 초기화 — 세션 비대(토큰 낭비) 해소용
@@ -436,9 +455,16 @@ export function createManager({ db, bus, notify, workDir, uploadsDir, driverKind
       ...(patch.model !== undefined ? { model: patch.model || null } : {}),
       ...(patch.effort !== undefined ? { effort: patch.effort || null } : {}),
     });
-    driver.stopThread?.(channel); // 다음 메시지부터 새 스펙으로 세션 재개(resume — 기억 유지)
+    driver.stopThread?.(channel); // 진행 중 턴 interrupt — 다음 메시지부터 새 스펙으로 재개(resume — 기억 유지)
+    // 중단된 턴의 잔상 정리: '작업 중' 상태 해제 + 이 방의 대기 카드 취소
+    cancelPendingInteractions(channel);
+    const mainA = db.listAgents().find(a => a.kind === 'main');
+    if (mainA && (mainA.work_channel === channel || channel === 'main')) {
+      db.updateAgent(mainA.id, { status: 'idle', current_task: '' });
+    }
+    bus.agents();
     bus.threads?.();
-    bus.event('User', 'user', `방 스펙 변경 — ${th.title}: ${patch.model ?? '기본'} · ${patch.effort ?? '기본'}`);
+    bus.event('User', 'user', `방 스펙 변경 — ${th.title}: ${patch.model ?? '기본'} · ${patch.effort ?? '기본'} (진행 중 작업 중단)`);
   }
 
   // 채팅방 이름 변경

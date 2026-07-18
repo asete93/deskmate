@@ -2,19 +2,22 @@ import { h, Fragment } from 'preact';
 import { useState } from 'preact/hooks';
 import { store, showToast } from '../store.js';
 import { api } from '../api.js';
-import { C, card, Btn, SegPill, Modal, StatusPill, Chip, dotStyle, agentStatus, modelOptions, effortOptions, modelLabel, providerModelOptions, providerEffortOptions } from '../ui.jsx';
+import { C, card, Btn, SegPill, Modal, StatusPill, Chip, dotStyle, agentStatus, modelOptions, effortOptions, modelLabel, providerModelOptions, providerEffortOptions, Spin } from '../ui.jsx';
 import { I } from '../icons.jsx';
 import { nav } from '../main.jsx';
 import { MessageList, ChatInput, AgentSwitcher } from './chat.jsx';
 import { OrgScreen } from './org.jsx';
 import { t } from '../i18n.js';
 
-function CfgPanel({ agent, small }) {
+export function CfgPanel({ agent, small }) {
   const [nameDraft, setNameDraft] = useState(null);
+  const [avatarDraft, setAvatarDraft] = useState(null);
   const [roleDraft, setRoleDraft] = useState(null);
   const [promptDraft, setPromptDraft] = useState(null);
   const [fullPrompt, setFullPrompt] = useState(null); // 적용 프롬프트 열람 중이면 내용
+  const [pillBusy, setPillBusy] = useState(null);
   const setCfg = (patch) => api.post(`/agents/${agent.id}/config`, patch).catch(e => showToast(e.message));
+  const setCfgPill = (key, patch) => { setPillBusy(key); Promise.resolve(setCfg(patch)).finally(() => setTimeout(() => setPillBusy(null), 250)); };
   const toggleFullPrompt = async () => {
     if (fullPrompt != null) { setFullPrompt(null); return; }
     try { setFullPrompt((await api.get(`/agents/${agent.id}/prompt`)).content); } catch (e) { showToast(e.message); }
@@ -31,10 +34,19 @@ function CfgPanel({ agent, small }) {
         <div style={{ fontSize: '11.5px', color: C.t58, marginTop: '4px' }}>"@이름 요청내용"으로 이 팀원을 직접 부를 수 있습니다.</div>
       </div>
       <div>
+        <div style={{ fontSize: '11px', fontWeight: 600, letterSpacing: '0.08em', color: C.t58, marginBottom: '6px' }}>아바타 (1~4자 · 이모지 가능)</div>
+        <div style={{ display: 'flex', gap: '6px', alignItems: 'center' }}>
+          <input value={avatarDraft ?? (agent.avatar || '')} maxLength={4} onInput={e => setAvatarDraft(e.target.value)} placeholder={agent.name.slice(0, 2)} style={{ ...inputStyle, flex: 'none', width: '90px', textAlign: 'center' }} />
+          <Btn variant="outline" small onClick={() => { if (avatarDraft != null) setCfg({ avatar: avatarDraft.trim() }); }}>변경</Btn>
+          <span style={{ fontSize: '11.5px', color: C.t58 }}>채팅 발신자 아이콘에 표시 — 비우면 이름 앞 2자</span>
+        </div>
+      </div>
+      <div>
         <div style={{ fontSize: '11px', fontWeight: 600, letterSpacing: '0.08em', color: C.t58, marginBottom: '6px' }}>ROLE</div>
-        <div style={{ display: 'flex', gap: '6px' }}>
-          <input value={roleDraft ?? agent.role} onInput={e => setRoleDraft(e.target.value)} placeholder="예: 코드 구현" style={inputStyle} />
-          <Btn variant="outline" small onClick={() => { if (roleDraft != null && roleDraft !== agent.role) setCfg({ role: roleDraft }); }}>변경</Btn>
+        <div style={{ display: 'flex', gap: '6px', alignItems: 'flex-start' }}>
+          <textarea value={roleDraft ?? agent.role} rows={3} onInput={e => setRoleDraft(e.target.value)} placeholder="예: 코드 구현"
+            style={{ ...inputStyle, fontFamily: 'inherit', lineHeight: 1.5, resize: 'vertical' }} />
+          <Btn variant="outline" small onClick={() => { if (roleDraft != null && roleDraft !== agent.role) setCfg({ role: roleDraft.trim() }); }}>변경</Btn>
         </div>
       </div>
       <div>
@@ -56,14 +68,14 @@ function CfgPanel({ agent, small }) {
         </div>
         <div style={{ display: 'flex', gap: '5px', flexWrap: 'wrap' }}>
           {(agent.provider ? providerModelOptions(agent.provider) : modelOptions()).map(mo =>
-            <SegPill key={mo.value} small={small} active={agent.model === mo.value} onClick={() => setCfg({ model: mo.value })}>{mo.label}</SegPill>)}
+            <SegPill key={mo.value} small={small} active={agent.model === mo.value} onClick={() => setCfgPill(`m:${mo.value}`, { model: mo.value })}>{pillBusy === `m:${mo.value}` ? <Spin /> : null} {mo.label}</SegPill>)}
         </div>
       </div>
       <div>
         <div style={{ fontSize: '11px', fontWeight: 600, letterSpacing: '0.08em', color: C.t58, marginBottom: '6px' }}>EFFORT</div>
         <div style={{ display: 'flex', gap: '5px', flexWrap: 'wrap' }}>
           {(agent.provider ? providerEffortOptions(agent.provider) : effortOptions(agent.model)).map(ef =>
-            <SegPill key={ef} small={small} active={agent.effort === ef} onClick={() => setCfg({ effort: ef })}>{ef}</SegPill>)}
+            <SegPill key={ef} small={small} active={agent.effort === ef} onClick={() => setCfgPill(`e:${ef}`, { effort: ef })}>{pillBusy === `e:${ef}` ? <Spin /> : null} {ef}</SegPill>)}
         </div>
       </div>
     </div>
@@ -266,7 +278,6 @@ export function SubsScreen({ param, openAi }) {
               <div style={{ background: '#f9f9f9', borderRadius: '8px', padding: '10px 12px', fontSize: '13px', lineHeight: 1.5 }}>
                 <span style={{ fontWeight: 600, color: C.heading }}>현재 작업 · </span>{sc.current_task || '대기 중'}
               </div>
-              {cfgOpenId === sc.id && <CfgPanel agent={sc} small />}
               <div style={{ marginTop: 'auto', display: 'flex', gap: '8px', alignItems: 'center', flexWrap: 'wrap' }}>
                 <Btn variant="primary" small onClick={() => nav('subs', sc.id)}>{t('직접 문의')}</Btn>
                 <Btn variant="darkOutline" small onClick={() => setCfgOpenId(cfgOpenId === sc.id ? null : sc.id)}>{t('모델 설정')}</Btn>
@@ -277,6 +288,19 @@ export function SubsScreen({ param, openAi }) {
         })}
       </div>
 
+      {cfgOpenId != null && (() => {
+        const a = subs.find(x => x.id === cfgOpenId);
+        if (!a) return null;
+        return (
+          <Modal onClose={() => setCfgOpenId(null)} maxWidth="640px">
+            <div style={{ display: 'flex', alignItems: 'center', gap: '8px', marginBottom: '12px' }}>
+              <span style={{ fontSize: '15.5px', fontWeight: 700, color: C.heading, whiteSpace: 'nowrap', flexShrink: 0 }}>{a.name}</span>
+              <span style={{ fontSize: '12.5px', color: C.t58, overflow: 'hidden', textOverflow: 'ellipsis', whiteSpace: 'nowrap' }}>{a.role}</span>
+            </div>
+            <CfgPanel agent={a} />
+          </Modal>
+        );
+      })()}
       {hireOpen && <HireModal onClose={() => setHireOpen(false)} />}
       {delTarget && (
         <Modal onClose={() => setDelTarget(null)} maxWidth="440px">

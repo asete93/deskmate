@@ -3,7 +3,8 @@ import { useEffect, useRef, useState } from 'preact/hooks';
 import { marked } from 'marked';
 import { store, loadChannel, showToast, unreadCount } from '../store.js';
 import { api, currentBase } from '../api.js';
-import { C, card, Btn, SegPill, Input, Chip, StatusPill, REQ_STATUS, actorChip, actorLabel, fmtTime, modelLabel, modelOptions, effortOptions, agentStatus, dotStyle, Linkify } from '../ui.jsx';
+import { C, card, Btn, SegPill, Input, Chip, StatusPill, REQ_STATUS, actorChip, actorLabel, fmtTime, modelLabel, modelOptions, effortOptions, agentStatus, dotStyle, Linkify, Modal, Spin } from '../ui.jsx';
+import { CfgPanel } from './subs.jsx';
 import { I } from '../icons.jsx';
 import { nav } from '../main.jsx';
 import { t, isEn } from '../i18n.js';
@@ -25,6 +26,7 @@ function ChoiceCard({ m, answer }) {
   const c = m.content;
   const multi = !!c.multi;
   const [detailOpen, setDetailOpen] = useState(false);
+  const [pending, setPending] = useState(null); // 클릭한 옵션 id — 서버 반영까지 스피너
   // 다중 선택: 토글로 모아서 "선택 완료" 버튼으로 한 번에 제출 (단일 선택은 즉시 제출)
   const [sel, setSel] = useState([]);
   const pickedLabels = m.answered
@@ -32,8 +34,10 @@ function ChoiceCard({ m, answer }) {
     : [];
   const toggle = (op) => setSel(s => s.includes(op.id) ? s.filter(x => x !== op.id) : [...s, op.id]);
   const submitMulti = () => {
+    if (pending != null) return;
     const ops = (c.options || []).filter(op => sel.includes(op.id));
-    answer({ ids: ops.map(o => o.id), labels: ops.map(o => o.label), label: ops.map(o => o.label).join(', ') });
+    setPending('__multi__');
+    Promise.resolve(answer({ ids: ops.map(o => o.id), labels: ops.map(o => o.label), label: ops.map(o => o.label).join(', ') })).finally(() => setTimeout(() => setPending(null), 400));
   };
   return (
     <div style={card({ padding: '20px' })}>
@@ -59,8 +63,9 @@ function ChoiceCard({ m, answer }) {
           const isPicked = m.answered ? pickedLabels.includes(op.label) : (multi && sel.includes(op.id));
           return (
             <div key={op.id} onClick={() => {
-              if (m.answered) return;
-              if (multi) toggle(op); else answer({ id: op.id, label: op.label });
+              if (m.answered || pending != null) return;
+              if (multi) toggle(op);
+              else { setPending(op.id); Promise.resolve(answer({ id: op.id, label: op.label })).finally(() => setTimeout(() => setPending(null), 400)); }
             }}
               style={{
                 border: `1px solid ${isPicked ? C.cta : C.border}`, borderRadius: '12px', padding: '14px 16px',
@@ -70,7 +75,7 @@ function ChoiceCard({ m, answer }) {
               }}
               onMouseEnter={e => { if (!m.answered && !isPicked) { e.currentTarget.style.borderColor = C.cta; e.currentTarget.style.background = '#f9f9f9'; } }}
               onMouseLeave={e => { if (!m.answered && !isPicked) { e.currentTarget.style.borderColor = C.border; e.currentTarget.style.background = '#fff'; } }}>
-              <div style={{ fontSize: '15px', fontWeight: 600, color: C.heading }}>{isPicked ? '✓ ' : ''}{op.label}</div>
+              <div style={{ fontSize: '15px', fontWeight: 600, color: C.heading, display: 'flex', alignItems: 'center', gap: '7px' }}>{pending === op.id && !m.answered ? <Spin /> : isPicked ? '✓ ' : ''}{op.label}</div>
               <div style={{ fontSize: '13px', color: C.t58, marginTop: '4px', lineHeight: 1.45 }}>{op.desc}</div>
             </div>
           );
@@ -78,7 +83,7 @@ function ChoiceCard({ m, answer }) {
       </div>
       {multi && !m.answered && (
         <div style={{ marginTop: '14px' }}>
-          <Btn variant="primary" small disabled={sel.length === 0} onClick={submitMulti}>{t('선택 완료')} ({sel.length})</Btn>
+          <Btn variant="primary" small disabled={sel.length === 0 || pending != null} onClick={submitMulti}>{pending === '__multi__' ? <Spin color="#fff" track="rgba(255,255,255,0.35)" /> : null} {t('선택 완료')} ({sel.length})</Btn>
         </div>
       )}
       {m.answered && <AnsweredBar text={`선택 완료 — ${pickedLabels.join(', ')}`} />}
@@ -196,28 +201,33 @@ function FormCard({ m, answer }) {
 // ---- 상세 원문 팝업 (마크다운 렌더) ----
 marked.use({ gfm: true, breaks: true });
 const MD_CSS = `
-.md-body{font-size:14px;line-height:1.55;color:#22302b;overflow-wrap:break-word;white-space:normal}
+.md-body{font-size:14.5px;line-height:1.65;color:#22302b;overflow-wrap:break-word;white-space:normal}
 .md-body>*:first-child{margin-top:0}
-.md-body h1,.md-body h2,.md-body h3{margin:14px 0 5px;color:#14211c}
-.md-body h1{font-size:18px}.md-body h2{font-size:16.5px}.md-body h3{font-size:15px}
-.md-body p{margin:5px 0}
-.md-body ul,.md-body ol{padding-left:22px;margin:5px 0}
-.md-body li{margin:2px 0}
+.md-body h1,.md-body h2{margin:22px 0 8px;padding-bottom:6px;border-bottom:1px solid #e7e3d8;color:#14211c;font-weight:700}
+.md-body h3,.md-body h4{margin:16px 0 6px;color:#14211c;font-weight:700}
+.md-body h1{font-size:19px}.md-body h2{font-size:16.5px}.md-body h3{font-size:15px}.md-body h4{font-size:14.5px}
+.md-body p{margin:7px 0}
+.md-body strong{color:#14211c}
+.md-body ul,.md-body ol{padding-left:24px;margin:7px 0}
+.md-body li{margin:3px 0;padding-left:2px}
+.md-body li::marker{color:#00754a;font-weight:700}
 .md-body li>p{margin:0}
-.md-body li>ul,.md-body li>ol{margin:2px 0}
+.md-body li>ul,.md-body li>ol{margin:3px 0}
 .md-body table{border-collapse:collapse;margin:12px 0;font-size:13px;max-width:100%;display:block;overflow-x:auto}
-.md-body th,.md-body td{border:1px solid #ddd8cc;padding:6px 10px;text-align:left;vertical-align:top}
+.md-body th,.md-body td{border:1px solid #ddd8cc;padding:7px 12px;text-align:left;vertical-align:top}
 .md-body th{background:#f4f2ec;font-weight:700}
-.md-body code{background:#f4f2ec;border-radius:4px;padding:1px 5px;font-size:12.5px}
-.md-body pre{background:#f4f2ec;padding:12px;border-radius:8px;overflow-x:auto;white-space:pre}
-.md-body pre code{background:none;padding:0}
-.md-body hr{border:none;border-top:1px dashed #ddd8cc;margin:16px 0}
-.md-body blockquote{border-left:3px solid #cfe6dd;margin:8px 0;padding:2px 12px;color:#5a6660}
+.md-body tr:nth-child(even) td{background:#faf9f5}
+.md-body code{background:#eef4f0;color:#0b5c3f;border-radius:4px;padding:1.5px 6px;font-size:12.5px;font-family:ui-monospace,'SF Mono',Menlo,monospace}
+.md-body pre{background:#14211c;color:#e6efe9;padding:14px 16px;border-radius:10px;overflow-x:auto;white-space:pre;margin:10px 0}
+.md-body pre code{background:none;color:inherit;padding:0;font-size:12.5px;line-height:1.6}
+.md-body hr{border:none;border-top:1px dashed #ddd8cc;margin:18px 0}
+.md-body blockquote{border-left:3px solid #00754a;margin:10px 0;padding:4px 14px;color:#5a6660;background:#f7f6f1;border-radius:0 8px 8px 0}
+.md-body a{color:#00754a;text-decoration:underline}
 `;
 export function DetailModal({ title, body, onClose }) {
   return (
     <div onClick={onClose} style={{ position: 'fixed', inset: 0, zIndex: 140, background: 'rgba(20,33,28,0.45)', display: 'flex', alignItems: 'center', justifyContent: 'center', padding: '18px' }}>
-      <div onClick={e => e.stopPropagation()} style={{ background: '#fff', borderRadius: '16px', width: 'min(760px, 100%)', maxHeight: '86vh', display: 'flex', flexDirection: 'column', boxShadow: C.popShadow }}>
+      <div onClick={e => e.stopPropagation()} style={{ background: '#fff', borderRadius: '16px', width: 'min(920px, 100%)', maxHeight: '86vh', display: 'flex', flexDirection: 'column', boxShadow: C.popShadow }}>
         <div style={{ display: 'flex', alignItems: 'center', gap: '10px', padding: '16px 22px 10px' }}>
           <span style={{ fontSize: '16px' }}>📄</span>
           <span style={{ fontSize: '15.5px', fontWeight: 700, color: C.heading, flex: 1 }}>{title}</span>
@@ -262,6 +272,45 @@ function summarize(text) {
   let out = first;
   if (heads.length) out += `\n▸ ${heads.slice(0, 6).join(' · ')}${heads.length > 6 ? ` 외 ${heads.length - 6}` : ''}`;
   return out;
+}
+
+// 붙여넣은 텍스트 칩 + 원문 뷰어 (입력창·메시지 공용)
+export function PasteChip({ p, idx, onRemove }) {
+  const [open, setOpen] = useState(false);
+  return (
+    <>
+      <span onClick={() => setOpen(true)}
+        style={{ display: 'inline-flex', alignItems: 'center', gap: '6px', background: C.ceramic, border: `1px solid ${C.border}`, borderRadius: '10px', padding: '5px 12px', fontSize: '12px', fontWeight: 600, color: C.t87, cursor: 'pointer', maxWidth: '100%' }}>
+        📋 {t('붙여넣은 텍스트')} #{idx + 1} · {p.lines.toLocaleString()}{t('줄')}
+        {onRemove && <span onClick={(e) => { e.stopPropagation(); onRemove(); }} style={{ cursor: 'pointer', fontWeight: 700, color: C.t58 }}>✕</span>}
+      </span>
+      {open && (
+        <div onClick={() => setOpen(false)} style={{ position: 'fixed', inset: 0, zIndex: 150, background: 'rgba(20,33,28,0.55)', display: 'flex', alignItems: 'center', justifyContent: 'center', padding: '18px' }}>
+          <div onClick={e => e.stopPropagation()} style={{ background: '#fff', borderRadius: '16px', width: 'min(920px, 100%)', maxHeight: '86vh', display: 'flex', flexDirection: 'column', boxShadow: C.popShadow }}>
+            <div style={{ display: 'flex', alignItems: 'center', gap: '10px', padding: '16px 22px 10px' }}>
+              <span style={{ fontSize: '16px' }}>📋</span>
+              <span style={{ fontSize: '15px', fontWeight: 700, color: C.heading, flex: 1 }}>{t('붙여넣은 텍스트')} — {p.lines.toLocaleString()}{t('줄')}</span>
+              <span onClick={() => setOpen(false)} style={{ cursor: 'pointer', color: C.t58, fontSize: '16px', padding: '2px 6px' }}>✕</span>
+            </div>
+            <pre style={{ margin: 0, overflow: 'auto', padding: '4px 22px 22px', fontFamily: "ui-monospace,'SF Mono',Menlo,monospace", fontSize: '12.5px', lineHeight: 1.6, whiteSpace: 'pre-wrap', overflowWrap: 'break-word', color: C.t87 }}>{p.text}</pre>
+          </div>
+        </div>
+      )}
+    </>
+  );
+}
+
+// 발신자 아바타 — 기본은 이름(앞 2자), agents.avatar로 커스텀(조직도에서 수정)
+function MsgAvatar({ name, onOpenCfg }) {
+  const chip = actorChip(name);
+  const ag = (store.agents || []).find(a => a.name === name || (name === 'Main' && a.kind === 'main'));
+  const label = name === 'User' ? t('대표') : ((ag?.avatar || '').trim() || actorLabel(name).slice(0, 2));
+  const clickable = name !== 'User' && ag && onOpenCfg;
+  return (
+    <div title={name === 'User' ? t('대표') : `${actorLabel(name)} — ${clickable ? (isEn() ? 'click to configure' : '클릭하면 설정') : ''}`}
+      onClick={clickable ? () => onOpenCfg(ag.id) : undefined}
+      style={{ width: '34px', height: '34px', borderRadius: '50%', background: chip.bg, color: chip.color, display: 'flex', alignItems: 'center', justifyContent: 'center', fontSize: label.length > 2 ? '9.5px' : '11.5px', fontWeight: 700, flexShrink: 0, boxShadow: C.cardShadow, marginTop: '17px', whiteSpace: 'nowrap', overflow: 'hidden', cursor: clickable ? 'pointer' : 'default' }}>{label}</div>
+  );
 }
 
 // 에이전트 발화 본문 — 길면 요약(첫 문장+목차)만 보이고 원문은 팝업 (attach_detail을 안 쓴 경우의 안전망)
@@ -350,7 +399,7 @@ export function MessageList({ channel, height = null, agentName = '팀장', agen
   // 주의: 지역변수명 h 금지 — JSX 팩토리 h를 가림
   // 헤더 밴드(약 54px) 포함 기준으로 산정. 모바일은 여백 최소화해 채팅 영역 최대 확보.
   const listH = height || (window.innerWidth < 840
-    ? 'calc(100dvh - 334px)'
+    ? 'calc(100dvh - 200px)'
     : `calc(100vh - ${inCard ? 250 : 244}px)`); // 데스크탑: 카드가 페이지 하단까지 차도록
   const msgs = store.messages[channel] || [];
   const agent = channel === 'main'
@@ -485,6 +534,7 @@ export function TargetPill({ effTarget, targetName, setTarget }) {
 export function RoomFeed({ channel, inCard = false }) {
   const ref = useRef(null);
   const [reportReq, setReportReq] = useState(null);
+  const [cfgAgentId, setCfgAgentId] = useState(null); // 아바타 클릭 → 팀원 설정 팝업
   const msgs = store.messages[channel] || [];
   const reqById = Object.fromEntries(store.requests.map(r => [r.id, r]));
   // 이 방에서 발원한 작업만 인디케이터 표시
@@ -492,7 +542,7 @@ export function RoomFeed({ channel, inCard = false }) {
   useEffect(() => { loadChannel(channel); }, [channel]);
   useEffect(() => { if (ref.current) ref.current.scrollTop = ref.current.scrollHeight; }, [msgs.length, roomActive.length, channel]);
   const mobile = window.innerWidth < 840;
-  const listH = mobile ? 'calc(100dvh - 334px)' : `calc(100vh - ${inCard ? 250 : 244}px)`;
+  const listH = mobile ? 'calc(100dvh - 200px)' : `calc(100vh - ${inCard ? 250 : 244}px)`;
 
   let lastReqId = null;
   const rows = [];
@@ -510,14 +560,13 @@ export function RoomFeed({ channel, inCard = false }) {
         if (r.divider) return <ReqDivider key={`d${r.divider.id}-${i}`} req={r.divider} onReport={setReportReq} />;
         const m = r.m;
         if (m.kind === 'report') {
-          const from = actorChip(m.from_actor);
           return (
-            <div key={m.id} style={{ display: 'flex', flexDirection: 'column', alignItems: 'flex-start' }}>
-              <div style={{ display: 'flex', alignItems: 'center', gap: '7px', marginBottom: '6px' }}>
-                <Chip bg={from.bg} color={from.color} style={{ fontSize: '12px', fontWeight: 700, padding: '3px 10px' }}>{actorLabel(m.from_actor)}</Chip>
-                <span style={{ fontSize: '11.5px', color: C.t58 }}>{fmtTime(m.ts)}</span>
+            <div key={m.id} style={{ display: 'flex', gap: '9px', alignItems: 'flex-start' }}>
+              <MsgAvatar name={m.from_actor} onOpenCfg={setCfgAgentId} />
+              <div style={{ display: 'flex', flexDirection: 'column', alignItems: 'flex-start', minWidth: 0 }}>
+                <div style={{ fontSize: '11.5px', color: C.t58, marginBottom: '3px' }}>{fmtTime(m.ts)}</div>
+                <ReportLinkCard m={m} />
               </div>
-              <ReportLinkCard m={m} />
             </div>
           );
         }
@@ -530,41 +579,47 @@ export function RoomFeed({ channel, inCard = false }) {
           );
         }
         if (m.from_actor === 'User') {
-          const toChip = actorChip(m.to_actor);
           return (
-            <div key={m.id} style={{ display: 'flex', flexDirection: 'column', alignItems: 'flex-end' }}>
-              <div style={{ display: 'flex', alignItems: 'center', gap: '7px', marginBottom: '6px' }}>
-                <span style={{ fontSize: '11.5px', color: C.t58 }}>{fmtTime(m.ts)}</span>
-                <Chip bg={C.goldLight} color={C.goldText} style={{ fontSize: '12px', fontWeight: 700, padding: '3px 10px' }}>{t('대표')}</Chip>
-                <span style={{ fontSize: '13px', fontWeight: 700, color: C.t87 }}>→</span>
-                <Chip bg={toChip.bg} color={toChip.color} style={{ fontSize: '12px', fontWeight: 700, padding: '3px 10px' }}>{actorLabel(m.to_actor)}</Chip>
+            <div key={m.id} style={{ display: 'flex', gap: '9px', justifyContent: 'flex-end', alignItems: 'flex-start' }}>
+              <div style={{ display: 'flex', flexDirection: 'column', alignItems: 'flex-end', minWidth: 0, maxWidth: 'calc(100% - 43px)' }}>
+                <div style={{ fontSize: '11.5px', color: C.t58, marginBottom: '3px' }}>{fmtTime(m.ts)}</div>
+                <div style={{ maxWidth: '100%', background: C.cta, color: '#fff', borderRadius: '16px 16px 4px 16px', padding: '10px 15px', fontSize: '14px', lineHeight: 1.55, whiteSpace: 'pre-wrap', overflowWrap: 'break-word' }}>
+                  <span style={{ fontWeight: 700, color: '#d4e9e2' }}>{actorLabel(m.to_actor)}</span>{' '}
+                  <Linkify text={m.content.text} light />
+                </div>
+                {(m.content.pastes || []).length > 0 && (
+                  <div style={{ display: 'flex', flexWrap: 'wrap', gap: '6px', marginTop: '6px', justifyContent: 'flex-end' }}>
+                    {m.content.pastes.map((pp, i) => <PasteChip key={i} p={pp} idx={i} />)}
+                  </div>
+                )}
+                <Attachments atts={m.content.attachments} align="flex-end" />
               </div>
-              <div style={{ maxWidth: '78%', background: C.cta, color: '#fff', borderRadius: '16px 16px 4px 16px', padding: '10px 15px', fontSize: '14px', lineHeight: 1.55, whiteSpace: 'pre-wrap', overflowWrap: 'break-word' }}><Linkify text={m.content.text} light /></div>
-              <Attachments atts={m.content.attachments} align="flex-end" />
+              <MsgAvatar name="User" />
             </div>
           );
         }
-        const from = actorChip(m.from_actor);
-        const to = actorChip(m.to_actor);
         const Card = CARDS[m.kind];
+        // 수신자 표시 — 호칭 없이 이름만
+        const recvName = m.to_actor === 'User' ? t('대표') : actorLabel(m.to_actor);
         return (
-          <div key={m.id} style={{ display: 'flex', flexDirection: 'column', alignItems: 'flex-start' }}>
-            <div style={{ display: 'flex', alignItems: 'center', gap: '7px', marginBottom: '6px' }}>
-              <Chip bg={from.bg} color={from.color} style={{ fontSize: '12px', fontWeight: 700, padding: '3px 10px' }}>{actorLabel(m.from_actor)}</Chip>
-              <span style={{ fontSize: '13px', fontWeight: 700, color: C.t87 }}>→</span>
-              <Chip bg={to.bg} color={to.color} style={{ fontSize: '12px', fontWeight: 700, padding: '3px 10px' }}>{m.to_actor === 'User' ? t('대표') : actorLabel(m.to_actor)}</Chip>
-              <span style={{ fontSize: '11.5px', color: C.t58 }}>{fmtTime(m.ts)}</span>
-              {Card && <span style={{ fontSize: '11.5px', fontWeight: 600, color: C.goldText }}>· {t(CARD_TITLES[m.kind])}</span>}
-            </div>
-            <div style={{ width: '100%', maxWidth: Card ? '620px' : '78%' }}>
-              {Card
-                ? <Card m={m} answer={answerByMessage(m)} />
-                : (
-                  <div style={{ background: '#fff', borderRadius: '4px 16px 16px 16px', boxShadow: C.cardShadow, padding: '10px 15px', fontSize: '14px', lineHeight: 1.6, whiteSpace: 'pre-wrap', overflowWrap: 'break-word' }}>
-                    <AgentText text={m.content.text} />
-                    <Attachments atts={m.content.attachments} />
-                  </div>
-                )}
+          <div key={m.id} style={{ display: 'flex', gap: '9px', alignItems: 'flex-start' }}>
+            <MsgAvatar name={m.from_actor} onOpenCfg={setCfgAgentId} />
+            <div style={{ display: 'flex', flexDirection: 'column', alignItems: 'flex-start', flex: 1, minWidth: 0 }}>
+              <div style={{ fontSize: '11.5px', color: C.t58, marginBottom: '3px' }}>
+                {fmtTime(m.ts)}
+                {Card && <span style={{ fontWeight: 600, color: C.goldText }}> · {t(CARD_TITLES[m.kind])}</span>}
+              </div>
+              <div style={{ width: '100%', maxWidth: Card ? '620px' : '82%' }}>
+                {Card
+                  ? <Card m={m} answer={answerByMessage(m)} />
+                  : (
+                    <div style={{ background: '#fff', borderRadius: '4px 16px 16px 16px', boxShadow: C.cardShadow, padding: '10px 15px', fontSize: '14px', lineHeight: 1.6, whiteSpace: 'pre-wrap', overflowWrap: 'break-word' }}>
+                      <span style={{ fontWeight: 700, color: C.cta }}>{recvName}</span>{' '}
+                      <AgentText text={m.content.text} />
+                      <Attachments atts={m.content.attachments} />
+                    </div>
+                  )}
+              </div>
             </div>
           </div>
         );
@@ -572,6 +627,19 @@ export function RoomFeed({ channel, inCard = false }) {
       {msgs.length === 0 && <div style={{ color: C.t58, fontSize: '13.5px', alignSelf: 'center', marginTop: '40px' }}>{isEn() ? 'No messages yet — send the first request below.' : '아직 대화가 없습니다. 아래 입력창에서 첫 요청을 보내보세요.'}</div>}
       {roomActive.map(a => <WorkingIndicator key={a.id} agent={a} agentName={a.name} channel={channel} />)}
       {reportReq && <ReportModal requestId={reportReq.id} report={reportReq.report} onClose={() => setReportReq(null)} />}
+      {cfgAgentId != null && (() => {
+        const a = store.agents.find(x => x.id === cfgAgentId);
+        if (!a) return null;
+        return (
+          <Modal onClose={() => setCfgAgentId(null)} maxWidth="640px">
+            <div style={{ display: 'flex', alignItems: 'center', gap: '8px', marginBottom: '12px' }}>
+              <span style={{ fontSize: '15.5px', fontWeight: 700, color: C.heading, whiteSpace: 'nowrap', flexShrink: 0 }}>{a.name}</span>
+              <span style={{ fontSize: '12.5px', color: C.t58 }}>{a.kind === 'main' ? t('팀장') : a.role}</span>
+            </div>
+            <CfgPanel agent={a} />
+          </Modal>
+        );
+      })()}
     </div>
   );
 }
@@ -818,6 +886,7 @@ const previewUrl = (f) => {
 export function ChatInput({ channel, target = null, placeholder, inCard = false, noRedirect = false, onRouted = null, leading = null }) {
   const [draft, setDraft] = useState('');
   const [files, setFiles] = useState([]);   // 전송 대기 첨부 (n건)
+  const [pastes, setPastes] = useState([]); // 전송 대기 붙여넣기 텍스트 [{text, lines}]
   const [sending, setSending] = useState(false);
   const [dragOver, setDragOver] = useState(false);
   const [zoom, setZoom] = useState(null);   // 확대 중인 이미지 URL
@@ -845,7 +914,17 @@ export function ChatInput({ channel, target = null, placeholder, inCard = false,
           if (f) imgs.push(new File([f], `붙여넣기-${new Date().toISOString().replace(/[:.]/g, '-').slice(0, 19)}.${(f.type.split('/')[1] || 'png')}`, { type: f.type }));
         }
       }
-      if (imgs.length) { e.preventDefault(); setFiles(prev => [...prev, ...imgs]); }
+      if (imgs.length) { e.preventDefault(); setFiles(prev => [...prev, ...imgs]); return; }
+      // 긴 텍스트 붙여넣기(채팅 입력창에 포커스일 때만) → 원문은 칩으로, 입력창은 깨끗하게
+      const ae = document.activeElement;
+      if ((ae?.tagName === 'INPUT' || ae?.tagName === 'TEXTAREA') && ae.placeholder === placeholder) {
+        const txt = e.clipboardData?.getData('text') || '';
+        const lines = txt.split('\n').length;
+        if (lines >= 8 || txt.length > 600) {
+          e.preventDefault();
+          setPastes(prev => [...prev, { text: txt, lines }]);
+        }
+      }
     };
     window.addEventListener('dragover', onOver);
     window.addEventListener('dragleave', onLeave);
@@ -861,7 +940,7 @@ export function ChatInput({ channel, target = null, placeholder, inCard = false,
 
   const send = async () => {
     const text = draft.trim();
-    if ((!text && files.length === 0) || sending) return;
+    if ((!text && files.length === 0 && pastes.length === 0) || sending) return;
     setSending(true);
     try {
       // 1) 첨부 업로드 (있으면)
@@ -874,8 +953,8 @@ export function ChatInput({ channel, target = null, placeholder, inCard = false,
         attachments = await up.json();
       }
       // 2) 메시지 전송 — team 채널은 target(수신 대상)을 함께 전달
-      const r = await api.post(`/chat/${encodeURIComponent(channel)}`, { text, attachments, ...(target ? { target } : {}) });
-      setDraft(''); setFiles([]);
+      const r = await api.post(`/chat/${encodeURIComponent(channel)}`, { text, attachments, ...(pastes.length ? { pastes } : {}), ...(target ? { target } : {}) });
+      setDraft(''); setFiles([]); setPastes([]);
       if (channel === 'team') {
         // 팀 채팅은 제자리 유지 — @지목으로 대상이 바뀌었으면 pill 고정만 갱신
         if (r.target && r.target !== target) { showToast('지목한 직원에게 전달했습니다.'); onRouted?.(r.target); }
@@ -903,7 +982,7 @@ export function ChatInput({ channel, target = null, placeholder, inCard = false,
   };
   const pickMention = (name) => {
     setDraft(routeMention(name) ? draft.replace(/@\S*$/, '') : draft.replace(/@\S*$/, `@${name} `));
-    document.querySelector(`input[placeholder="${placeholder}"]`)?.focus();
+    (document.querySelector(`textarea[placeholder="${placeholder}"]`) || document.querySelector(`input[placeholder="${placeholder}"]`))?.focus();
   };
   const onInputText = (v) => {
     const m = onRouted && v.match(/(?:^|\s)@(\S+)\s$/);
@@ -930,10 +1009,15 @@ export function ChatInput({ channel, target = null, placeholder, inCard = false,
               onMouseEnter={e => e.currentTarget.style.background = '#f9f9f9'}
               onMouseLeave={e => e.currentTarget.style.background = 'transparent'}>
               <span style={{ width: '7px', height: '7px', borderRadius: '50%', background: a.kind === 'main' ? C.dark : C.cta, flexShrink: 0 }} />
-              <span style={{ fontSize: '13.5px', fontWeight: 600, color: C.heading }}>{a.name}</span>
-              <span style={{ fontSize: '11.5px', color: C.t58, marginLeft: 'auto' }}>{a.kind === 'main' ? '팀장' : a.role || '팀원'}</span>
+              <span style={{ fontSize: '13.5px', fontWeight: 600, color: C.heading, whiteSpace: 'nowrap', flexShrink: 0 }}>{a.name}</span>
+              <span style={{ fontSize: '11.5px', color: C.t58, marginLeft: 'auto', whiteSpace: 'nowrap', overflow: 'hidden', textOverflow: 'ellipsis', minWidth: 0, textAlign: 'right' }}>{a.kind === 'main' ? '팀장' : a.role || '팀원'}</span>
             </div>
           ))}
+        </div>
+      )}
+      {pastes.length > 0 && (
+        <div style={{ display: 'flex', flexWrap: 'wrap', gap: '8px', padding: '0 8px', alignItems: 'center' }}>
+          {pastes.map((pp, i) => <PasteChip key={i} p={pp} idx={i} onRemove={() => setPastes(pastes.filter((_, j) => j !== i))} />)}
         </div>
       )}
       {files.length > 0 && (
@@ -959,7 +1043,7 @@ export function ChatInput({ channel, target = null, placeholder, inCard = false,
           <img src={zoom} style={{ maxWidth: '94%', maxHeight: '94%', borderRadius: '12px', boxShadow: '0 12px 40px rgba(0,0,0,0.4)' }} />
         </div>
       )}
-      <div style={{ display: 'flex', gap: '8px', alignItems: 'center', background: '#fff', borderRadius: '50px', boxShadow: inCard ? 'none' : C.cardShadow, border: inCard ? `1px solid ${C.border}` : 'none', padding: '8px 8px 8px 14px' }}>
+      <div style={{ display: 'flex', gap: '8px', alignItems: 'center', background: '#fff', borderRadius: '24px', boxShadow: inCard ? 'none' : C.cardShadow, border: inCard ? `1px solid ${C.border}` : 'none', padding: '8px 8px 8px 14px' }}>
         {/* 전송 대상 pill 등 입력 바 내장 슬롯 */}
         {leading}
         {/* 첨부 버튼 (파일·이미지 n건) */}
@@ -969,8 +1053,11 @@ export function ChatInput({ channel, target = null, placeholder, inCard = false,
         </div>
         <input type="file" multiple hidden ref={fileRef}
           onChange={e => { setFiles([...files, ...e.target.files]); e.target.value = ''; }} />
-        <input value={draft} onInput={e => onInputText(e.target.value)} onKeyDown={e => { if (e.key === 'Enter') send(); }}
-          placeholder={placeholder} style={{ flex: 1, border: 'none', outline: 'none', fontSize: '14.5px', background: 'transparent', minWidth: 0 }} />
+        <textarea value={draft} rows={1}
+          onInput={e => { onInputText(e.target.value); e.target.style.height = 'auto'; e.target.style.height = `${Math.min(e.target.scrollHeight, 132)}px`; }}
+          onKeyDown={e => { if (e.key === 'Enter' && !e.shiftKey) { e.preventDefault(); send(); e.target.style.height = 'auto'; } }}
+          placeholder={placeholder}
+          style={{ flex: 1, border: 'none', outline: 'none', fontSize: '14.5px', background: 'transparent', minWidth: 0, resize: 'none', fontFamily: 'inherit', lineHeight: 1.5, maxHeight: '132px', padding: '0', display: 'block' }} />
         <Btn variant="primary" onClick={send}>{sending ? '전송 중…' : '보내기'}</Btn>
       </div>
     </div>
@@ -992,6 +1079,8 @@ export function ChatScreen({ openGoal, param }) {
   const effTarget = targetAgent ? target : 'main'; // 대상이 해고됐으면 팀장 복귀
   const targetName = (targetAgent || store.agents.find(a => a.kind === 'main'))?.name || t('팀장');
   const [cfgOpen, setCfgOpen] = useState(false);
+  const [clearOpen, setClearOpen] = useState(false); // 대화 초기화 방식 선택 팝업
+  const [avatarDraft, setAvatarDraft] = useState(null);
   const [mdEditing, setMdEditing] = useState(false);
   const [mdDraft, setMdDraft] = useState('');
   const [platformMd, setPlatformMd] = useState(null); // 열람 중이면 내용, 아니면 null
@@ -1000,6 +1089,8 @@ export function ChatScreen({ openGoal, param }) {
   const modeLabelText = MODES.find(m => m.key === store.mode)?.label || store.mode;
 
   const setMode = (mode) => api.post('/mode', { mode }).catch(e => showToast(e.message));
+  const [cfgBusy, setCfgBusy] = useState(null); // 클릭한 pill 키 — 반영까지 스피너
+  const withBusy = (key, p) => { setCfgBusy(key); Promise.resolve(p).catch(e => showToast(e.message)).finally(() => setTimeout(() => setCfgBusy(null), 250)); };
   const setCfg = (patch) => api.post(`/agents/${main.id}/config`, patch).catch(e => showToast(e.message));
   // 방별 스펙 오버라이드 (빈 값 = 기본값 따름)
   const curThread = (store.threads || []).find(x => x.channel === room);
@@ -1024,16 +1115,18 @@ export function ChatScreen({ openGoal, param }) {
     transition: 'all 0.15s ease', whiteSpace: 'nowrap',
   });
   const iconBtn = (active) => ({
-    width: '30px', height: '30px', borderRadius: '50%', cursor: 'pointer', flexShrink: 0,
+    width: mobile ? '26px' : '30px', height: mobile ? '26px' : '30px', borderRadius: '50%', cursor: 'pointer', flexShrink: 0,
     display: 'inline-flex', alignItems: 'center', justifyContent: 'center',
     background: active ? '#fff' : 'rgba(255,255,255,0.12)', color: active ? C.dark : 'rgba(255,255,255,0.85)',
   });
   const roomTitle = (store.threads || []).find(x => x.channel === room)?.title || (isEn() ? 'Main chat' : '메인 채팅');
   const band = (
-    <div style={{ background: C.dark, color: '#fff', padding: '10px 14px', display: 'flex', alignItems: 'center', gap: '10px', flexWrap: 'wrap', borderRadius: mobile ? '12px' : '0' }}>
+    <div style={{ background: C.dark, color: '#fff', padding: mobile ? '8px 10px' : '10px 14px', display: 'flex', alignItems: 'center', gap: mobile ? '6px' : '10px', flexWrap: mobile ? 'nowrap' : 'wrap', borderRadius: mobile ? '12px' : '0' }}>
       {mobile ? (
-        // 모바일: 방 드롭다운이 곧 타이틀
-        <ThreadSwitcher current={room} onPick={(ch) => nav('chat', ch)} />
+        // 모바일: 방 드롭다운이 곧 타이틀 — 남는 폭을 차지하되 줄바꿈 없이 축소
+        <div style={{ flex: 1, minWidth: 0, overflow: 'hidden' }}>
+          <ThreadSwitcher current={room} onPick={(ch) => nav('chat', ch)} />
+        </div>
       ) : (
         // 데스크탑: 좌측 방 목록이 전환 담당 — 밴드엔 방 이름 + 담당(팀장) 정보
         <div style={{ minWidth: 0 }}>
@@ -1041,18 +1134,34 @@ export function ChatScreen({ openGoal, param }) {
           <div style={{ fontSize: '11px', color: 'rgba(255,255,255,0.65)', marginTop: '1px' }}>{main.name || t('팀장')} · {modelLabel(roomModel)} · {roomEffort}{curThread?.model || curThread?.effort ? (isEn() ? ' (room)' : ' (방 전용)') : ''} · {modeLabelText}</div>
         </div>
       )}
-      <div style={{ marginLeft: 'auto', display: 'flex', alignItems: 'center', gap: '8px' }}>
+      <div style={{ marginLeft: 'auto', display: 'flex', alignItems: 'center', gap: mobile ? '5px' : '8px', flexShrink: 0 }}>
         <div style={{ display: 'inline-flex', background: 'rgba(255,255,255,0.12)', borderRadius: '50px', padding: '3px' }}>
-          <div onClick={() => setTab('chat')} style={segStyle(tab === 'chat')}>{t('대화')}</div>
-          <div onClick={() => setTab('md')} style={segStyle(tab === 'md')}>CLAUDE.md</div>
+          <div onClick={() => setTab('chat')} style={{ ...segStyle(tab === 'chat'), ...(mobile ? { padding: '4px 10px', fontSize: '11.5px' } : {}) }}>{t('대화')}</div>
+          <div onClick={() => setTab('md')} style={{ ...segStyle(tab === 'md'), ...(mobile ? { padding: '4px 10px', fontSize: '11.5px' } : {}) }}>{mobile ? 'MD' : 'CLAUDE.md'}</div>
         </div>
-        <span onClick={() => {
-          if (confirm(isEn()
-            ? 'Clear this room?\nAll messages and this room\'s memory will be erased.'
-            : '이 방의 대화를 초기화할까요?\n대화 내용과 팀장의 이 방 기억이 모두 지워집니다.')) {
-            api.post(`/threads/${encodeURIComponent(room)}/clear`).catch(e => showToast(e.message));
-          }
-        }} title={isEn() ? 'Clear conversation — erase messages & memory of this room' : '대화 초기화 — 이 방의 대화 내용과 기억을 비웁니다'} style={iconBtn(false)}>
+        <span onClick={async () => {
+          try {
+            const msgs = await api.get(`/chat/${encodeURIComponent(room)}`);
+            const nameOf = (x) => (x === 'User' ? t('대표') : actorLabel(x));
+            const lines = msgs.filter(m => m.kind !== 'system').map(m => {
+              const time = new Date(m.ts).toLocaleString('ko-KR');
+              let body = m.content?.text || '';
+              if (m.kind === 'report') body = `[보고서] ${m.content?.title || ''} ${m.content?.subtitle || ''}`.trim();
+              else if (m.kind !== 'text') body = `[${t(CARD_TITLES[m.kind] || m.kind)}] ${body}${m.answered ? `\n→ 답변: ${m.answer?.label || m.answer?.decision || JSON.stringify(m.answer || {}).slice(0, 80)}` : ' (미답변)'}`;
+              for (let i = 0; i < (m.content?.pastes || []).length; i++) body += `\n\n[붙여넣은 텍스트 ${i + 1} — ${m.content.pastes[i].lines}줄]\n${m.content.pastes[i].text}`;
+              return `### ${nameOf(m.from_actor)} → ${nameOf(m.to_actor)} · ${time}\n\n${body}`;
+            });
+            const md = `# ${roomTitle} — 대화 내보내기 (${new Date().toLocaleString('ko-KR')})\n\n${lines.join('\n\n---\n\n')}\n`;
+            const a = document.createElement('a');
+            a.href = URL.createObjectURL(new Blob([md], { type: 'text/markdown' }));
+            a.download = `${roomTitle}-대화-${new Date().toISOString().slice(0, 10)}.md`;
+            document.body.appendChild(a); a.click(); document.body.removeChild(a);
+            URL.revokeObjectURL(a.href);
+          } catch (e) { showToast(e.message); }
+        }} title={isEn() ? 'Export this room as Markdown' : '대화 내보내기 — 이 방의 대화를 Markdown 파일로 저장'} style={iconBtn(false)}>
+          <svg width="15" height="15" viewBox="0 0 24 24" fill="none" stroke="currentColor" stroke-width="2" stroke-linecap="round" stroke-linejoin="round"><path d="M21 15v4a2 2 0 0 1-2 2H5a2 2 0 0 1-2-2v-4" /><path d="M7 10l5 5 5-5" /><path d="M12 15V3" /></svg>
+        </span>
+        <span onClick={() => setClearOpen(true)} title={isEn() ? 'Clear conversation' : '대화 초기화'} style={iconBtn(false)}>
           <svg width="15" height="15" viewBox="0 0 24 24" fill="none" stroke="currentColor" stroke-width="2" stroke-linecap="round" stroke-linejoin="round"><path d="M3 12a9 9 0 1 0 9-9 9.75 9.75 0 0 0-6.74 2.74L3 8" /><path d="M3 3v5h5" /></svg>
         </span>
         <span data-cfg-toggle onClick={() => setCfgOpen(!cfgOpen)} title="팀장 설정 (모드·모델·effort·이름)" style={iconBtn(cfgOpen)}>{I.settings(15)}</span>
@@ -1061,31 +1170,24 @@ export function ChatScreen({ openGoal, param }) {
     </div>
   );
 
-  // 패널 밖(토글 버튼 제외) 클릭하면 자동 닫힘
-  useEffect(() => {
-    if (!cfgOpen) return;
-    const onDown = (e) => {
-      if (e.target.closest?.('[data-cfg-panel]') || e.target.closest?.('[data-cfg-toggle]')) return;
-      setCfgOpen(false);
-    };
-    window.addEventListener('mousedown', onDown);
-    return () => window.removeEventListener('mousedown', onDown);
-  }, [cfgOpen]);
-
   const cfgPanel = cfgOpen && (
-        <div data-cfg-panel style={mobile ? card({ padding: '18px 20px', display: 'flex', gap: '22px 28px', flexWrap: 'wrap' }) : { padding: '18px 20px', display: 'flex', gap: '22px 28px', flexWrap: 'wrap', borderBottom: `1px solid ${C.line}` }}>
+    <Modal onClose={() => setCfgOpen(false)} maxWidth="680px">
+        <div style={{ fontSize: '15.5px', fontWeight: 700, color: C.heading, marginBottom: '14px' }}>{t('팀장 설정')} — {roomTitle}</div>
+        <div data-cfg-panel style={{ display: 'flex', gap: '22px 28px', flexWrap: 'wrap' }}>
           <div style={{ width: '100%' }}>
             <div style={{ fontSize: '11px', fontWeight: 600, letterSpacing: '0.08em', color: C.t58, marginBottom: '8px' }}>NAME</div>
             <div style={{ display: 'flex', gap: '8px', maxWidth: '340px' }}>
               <Input value={nameDraft ?? main.name ?? ''} onInput={e => setNameDraft(e.target.value)} placeholder="팀장 이름" style={{ flex: 1, width: 'auto', padding: '8px 12px' }} />
               <Btn variant="outline" small onClick={() => { if (nameDraft && nameDraft !== main.name) setCfg({ name: nameDraft }); }}>변경</Btn>
+              <Input value={avatarDraft ?? (main.avatar || '')} maxLength={4} onInput={e => setAvatarDraft(e.target.value)} placeholder={isEn() ? 'Avatar' : '아바타'} style={{ width: '76px', flex: 'none', padding: '8px 10px', textAlign: 'center' }} />
+              <Btn variant="outline" small onClick={() => { if (avatarDraft != null) setCfg({ avatar: avatarDraft.trim() }); }}>{isEn() ? 'Avatar' : '아바타'}</Btn>
             </div>
             <div style={{ fontSize: '12px', color: C.t58, marginTop: '6px' }}>이름을 정하면 채팅에서 "@{nameDraft || main.name || '이름'} 요청내용"으로 부를 수 있습니다.</div>
           </div>
           <div style={{ width: '100%' }}>
             <div style={{ fontSize: '11px', fontWeight: 600, letterSpacing: '0.08em', color: C.t58, marginBottom: '8px' }}>MODE</div>
             <div style={{ display: 'flex', gap: '6px', flexWrap: 'wrap' }}>
-              {MODES.map(md => <SegPill key={md.key} active={store.mode === md.key} onClick={() => setMode(md.key)}>{md.label}</SegPill>)}
+              {MODES.map(md => <SegPill key={md.key} active={store.mode === md.key} onClick={() => withBusy(`mode:${md.key}`, setMode(md.key))}>{cfgBusy === `mode:${md.key}` ? <Spin /> : null} {md.label}</SegPill>)}
             </div>
             <div style={{ fontSize: '12.5px', color: C.t58, marginTop: '8px' }}>{MODES.find(m => m.key === store.mode)?.desc}</div>
           </div>
@@ -1101,20 +1203,40 @@ export function ChatScreen({ openGoal, param }) {
               <div>
                 <div style={{ fontSize: '10.5px', fontWeight: 600, color: C.t58, marginBottom: '6px' }}>MODEL</div>
                 <div style={{ display: 'flex', gap: '5px', flexWrap: 'wrap' }}>
-                  <SegPill small active={!curThread?.model} onClick={() => setRoomCfg({ model: '' })}>{isEn() ? 'Default' : '기본값'}</SegPill>
-                  {modelOptions().map(mo => <SegPill key={mo.value} small active={curThread?.model === mo.value} onClick={() => setRoomCfg({ model: mo.value })}>{mo.label}</SegPill>)}
+                  <SegPill small active={!curThread?.model} onClick={() => withBusy('rm:', setRoomCfg({ model: '' }))}>{cfgBusy === 'rm:' ? <Spin /> : null} {isEn() ? 'Default' : '기본값'}</SegPill>
+                  {modelOptions().map(mo => <SegPill key={mo.value} small active={curThread?.model === mo.value} onClick={() => withBusy(`rm:${mo.value}`, setRoomCfg({ model: mo.value }))}>{cfgBusy === `rm:${mo.value}` ? <Spin /> : null} {mo.label}</SegPill>)}
                 </div>
               </div>
               <div>
                 <div style={{ fontSize: '10.5px', fontWeight: 600, color: C.t58, marginBottom: '6px' }}>EFFORT</div>
                 <div style={{ display: 'flex', gap: '5px', flexWrap: 'wrap' }}>
-                  <SegPill small active={!curThread?.effort} onClick={() => setRoomCfg({ effort: '' })}>{isEn() ? 'Default' : '기본값'}</SegPill>
-                  {effortOptions(curThread?.model || main.model).map(ef => <SegPill key={ef} small active={curThread?.effort === ef} onClick={() => setRoomCfg({ effort: ef })}>{ef}</SegPill>)}
+                  <SegPill small active={!curThread?.effort} onClick={() => withBusy('re:', setRoomCfg({ effort: '' }))}>{cfgBusy === 're:' ? <Spin /> : null} {isEn() ? 'Default' : '기본값'}</SegPill>
+                  {effortOptions(curThread?.model || main.model).map(ef => <SegPill key={ef} small active={curThread?.effort === ef} onClick={() => withBusy(`re:${ef}`, setRoomCfg({ effort: ef }))}>{cfgBusy === `re:${ef}` ? <Spin /> : null} {ef}</SegPill>)}
                 </div>
               </div>
             </div>
           </div>
         </div>
+    </Modal>
+  );
+
+  const clearModal = clearOpen && (
+    <Modal onClose={() => setClearOpen(false)} maxWidth="440px">
+      <div style={{ fontSize: '16px', fontWeight: 700, color: C.heading }}>{t('대화 초기화')} — {roomTitle}</div>
+      <div style={{ fontSize: '13px', color: C.t58, marginTop: '6px', marginBottom: '16px' }}>{isEn() ? 'Choose what to clear.' : '어떻게 지울지 선택하세요.'}</div>
+      <div style={{ display: 'flex', flexDirection: 'column', gap: '10px' }}>
+        <Btn variant="black" style={{ background: C.danger, justifyContent: 'center' }} onClick={() => {
+          setClearOpen(false);
+          api.post(`/threads/${encodeURIComponent(room)}/clear`, { memory: true }).catch(e => showToast(e.message));
+        }}>{isEn() ? 'Erase messages + memory' : '전체 초기화 — 내용과 팀장 기억 모두 삭제'}</Btn>
+        <div style={{ fontSize: '11.5px', color: C.t58, marginTop: '-4px', paddingLeft: '4px' }}>{isEn() ? 'Session restarts from scratch; pending cards are cancelled.' : '세션이 백지에서 다시 시작되고, 대기 중인 카드도 취소됩니다.'}</div>
+        <Btn variant="darkOutline" style={{ justifyContent: 'center' }} onClick={() => {
+          setClearOpen(false);
+          api.post(`/threads/${encodeURIComponent(room)}/clear`, { memory: false }).catch(e => showToast(e.message));
+        }}>{isEn() ? 'Clear messages only (keep memory)' : '내용만 지우기 — 화면 정리 (기억·작업 유지)'}</Btn>
+        <div style={{ fontSize: '11.5px', color: C.t58, marginTop: '-4px', paddingLeft: '4px' }}>{isEn() ? 'The Team Lead keeps context; unanswered cards stay.' : '팀장의 기억과 진행 중 작업은 그대로, 미답변 카드는 남습니다.'}</div>
+      </div>
+    </Modal>
   );
 
   const mdView = (
@@ -1158,6 +1280,7 @@ export function ChatScreen({ openGoal, param }) {
       <div style={{ display: 'flex', flexDirection: 'column', gap: '12px', maxWidth: '860px', margin: '0 auto' }}>
         {band}
         {cfgPanel}
+        {clearModal}
         {tab === 'chat' ? (
           <>
             <RoomFeed channel={room} />
@@ -1174,6 +1297,7 @@ export function ChatScreen({ openGoal, param }) {
       <div style={card({ overflow: 'hidden' })}>
         {band}
         {cfgPanel}
+        {clearModal}
         {tab === 'chat' ? (
           <>
             <div style={{ background: '#edeae3', margin: '12px 12px 0', borderRadius: '8px' }}>

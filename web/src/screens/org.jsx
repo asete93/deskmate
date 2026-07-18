@@ -1,7 +1,10 @@
 import { h, Fragment } from 'preact';
 import { store } from '../store.js';
-import { C, card, Btn, Chip, dotStyle, agentStatus, modelLabel } from '../ui.jsx';
+import {C, card, Btn, Chip, dotStyle, agentStatus, modelLabel, Modal} from '../ui.jsx';
 import { nav } from '../main.jsx';
+import { useState } from 'preact/hooks';
+import { CfgPanel } from './subs.jsx';
+import { t } from '../i18n.js';
 
 const PROVIDER_LABEL = { openai: 'OpenAI', google: 'Google', xai: 'xAI' };
 const VLine = ({ h: hh = 20 }) => <div style={{ width: '2px', height: `${hh}px`, background: C.border }} />;
@@ -10,6 +13,9 @@ export function OrgScreen({ openAi }) {
   const main = store.agents.find(a => a.kind === 'main');
   const subs = store.agents.filter(a => a.kind === 'sub');
   const pendingAdds = store.approvals.filter(a => a.status === 'pending' && a.action === 'add');
+  const [pick, setPick] = useState(null);   // 클릭한 에이전트 — 이동/설정 선택 팝업
+  const [cfgId, setCfgId] = useState(null); // 설정 팝업 대상 id
+  const goChat = (a) => { setPick(null); if (a.kind === 'main') nav('chat'); else nav('subs', a.id); };
 
   return (
     <div style={{ display: 'flex', flexDirection: 'column', alignItems: 'center' }}>
@@ -29,7 +35,7 @@ export function OrgScreen({ openAi }) {
       <VLine h={26} />
 
       {/* Orchestrator */}
-      <div onClick={() => nav('chat')} style={{ background: C.dark, color: '#fff', borderRadius: '12px', padding: '18px 32px', textAlign: 'center', minWidth: '230px', cursor: 'pointer' }}>
+      <div onClick={() => main && setPick(main)} style={{ background: C.dark, color: '#fff', borderRadius: '12px', padding: '18px 32px', textAlign: 'center', minWidth: '230px', cursor: 'pointer' }}>
         <div style={{ fontSize: '11px', fontWeight: 700, letterSpacing: '0.1em', color: 'rgba(255,255,255,0.7)' }}>MAIN AGENT</div>
         <div style={{ fontSize: '17px', fontWeight: 600, marginTop: '4px' }}>{main?.name || '팀장'}</div>
         <div style={{ fontSize: '12.5px', color: 'rgba(255,255,255,0.7)', marginTop: '2px' }}>{main ? `${modelLabel(main.model)} · effort: ${main.effort}` : ''}</div>
@@ -44,7 +50,7 @@ export function OrgScreen({ openAi }) {
           return (
             <div key={og.id} style={{ display: 'flex', flexDirection: 'column', alignItems: 'center' }}>
               <VLine />
-              <div onClick={() => nav('subs', og.id)} style={card({ padding: '16px 18px', width: '200px', cursor: 'pointer', marginBottom: '16px' })}>
+              <div onClick={() => setPick(og)} style={card({ padding: '16px 18px', width: '200px', cursor: 'pointer', marginBottom: '16px' })}>
                 <div style={{ display: 'flex', alignItems: 'center', gap: '8px' }}>
                   <span style={dotStyle(st.dot, 8)} />
                   <span style={{ fontSize: '15px', fontWeight: 600, color: C.heading }}>{og.name}</span>
@@ -75,6 +81,32 @@ export function OrgScreen({ openAi }) {
           </div>
         ))}
       </div>
+      {pick && (
+        <Modal onClose={() => setPick(null)} maxWidth="420px">
+          <div style={{ display: 'flex', alignItems: 'center', gap: '8px', marginBottom: '6px' }}>
+            <span style={{ fontSize: '16px', fontWeight: 700, color: C.heading, whiteSpace: 'nowrap', flexShrink: 0 }}>{pick.name}</span>
+            <span style={{ fontSize: '12.5px', color: C.t58 }}>{pick.kind === 'main' ? t('팀장') : pick.role}</span>
+          </div>
+          <div style={{ fontSize: '13px', color: C.t58, marginBottom: '16px' }}>{t('무엇을 할까요?')}</div>
+          <div style={{ display: 'flex', flexDirection: 'column', gap: '10px' }}>
+            <Btn variant="primary" onClick={() => goChat(pick)} style={{ justifyContent: 'center' }}>💬 {t('채팅으로 이동')}</Btn>
+            <Btn variant="darkOutline" onClick={() => { setCfgId(pick.id); setPick(null); }} style={{ justifyContent: 'center' }}>⚙️ {t('모델·설정 변경')}</Btn>
+          </div>
+        </Modal>
+      )}
+      {cfgId != null && (() => {
+        const a = store.agents.find(x => x.id === cfgId);
+        if (!a) return null;
+        return (
+          <Modal onClose={() => setCfgId(null)} maxWidth="640px">
+            <div style={{ display: 'flex', alignItems: 'center', gap: '8px', marginBottom: '12px' }}>
+              <span style={{ fontSize: '15.5px', fontWeight: 700, color: C.heading, whiteSpace: 'nowrap', flexShrink: 0 }}>{a.name}</span>
+              <span style={{ fontSize: '12.5px', color: C.t58 }}>{a.kind === 'main' ? t('팀장') : a.role}</span>
+            </div>
+            <CfgPanel agent={a} />
+          </Modal>
+        );
+      })()}
     </div>
   );
 }

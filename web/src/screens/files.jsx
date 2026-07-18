@@ -47,6 +47,8 @@ function TreeNode({ node, depth, onOpen, onSelect, selected, onCtx, onDropTo, dr
 }
 
 export function FilesScreen() {
+  const mobile = window.innerWidth < 840;
+  const [treeOpen, setTreeOpen] = useState(false); // 모바일: 파일트리 팝업
   const [tree, setTree] = useState([]);
   const [tab, setTab] = useState(null);
   const [dirty, setDirty] = useState(false);
@@ -135,6 +137,7 @@ export function FilesScreen() {
       setMeta(r.binary ? { binary: true } : r.tooLarge ? { tooLarge: true } : null);
       setDirty(false);
       setTab({ path: node.path, name: node.name, doc: r.content || '', editable: !r.binary && !r.tooLarge });
+      if (mobile) setTreeOpen(false);
     } catch (e) { showToast(e.message); }
   };
 
@@ -270,10 +273,15 @@ export function FilesScreen() {
   };
 
   return (
-    <div style={{ display: 'flex', gap: '10px', height: 'calc(100vh - 112px)' }}>
+    <div style={{ display: 'flex', gap: '10px', height: mobile ? 'calc(100dvh - 104px)' : 'calc(100vh - 112px)' }}>
       <input type="file" multiple hidden ref={fileInput} onChange={e => { uploadFiles(e.target.files, ''); e.target.value = ''; }} />
       {/* 좌: 파일 트리 (다크) */}
-      <div ref={treePanelRef} style={{ position: 'relative', width: '260px', flexShrink: 0, background: PANEL, borderRadius: '12px', overflow: 'auto', boxShadow: C.cardShadow, padding: '8px 4px', userSelect: 'none' }}
+      {mobile && treeOpen && <div onClick={() => setTreeOpen(false)} style={{ position: 'fixed', inset: 0, zIndex: 88, background: 'rgba(20,33,28,0.45)' }} />}
+      <div ref={treePanelRef} style={mobile
+        ? (treeOpen
+          ? { position: 'fixed', top: '76px', left: '12px', right: '12px', bottom: '96px', zIndex: 90, background: PANEL, borderRadius: '12px', overflow: 'auto', boxShadow: C.popShadow, padding: '8px 4px', userSelect: 'none' }
+          : { display: 'none' })
+        : { position: 'relative', width: '260px', flexShrink: 0, background: PANEL, borderRadius: '12px', overflow: 'auto', boxShadow: C.cardShadow, padding: '8px 4px', userSelect: 'none' }}
         onMouseDown={onTreeMouseDown}
         onDragOver={e => { if (dragPath || e.dataTransfer.types.includes('Files')) { e.preventDefault(); setRootOver(true); } }}
         onDragLeave={e => { if (!e.currentTarget.contains(e.relatedTarget)) setRootOver(false); }}
@@ -300,7 +308,12 @@ export function FilesScreen() {
         {tab ? (
           <>
             <div style={{ display: 'flex', alignItems: 'center', gap: '8px', padding: '9px 14px', borderBottom: `1px solid ${LINE}` }}>
-              <span style={{ fontSize: '13px', fontWeight: 600, color: FG }}>{tab.path}{dirty ? ' •' : ''}</span>
+              {mobile && (
+                <span onClick={() => setTreeOpen(true)} title={isEn() ? 'Files' : '파일트리'} style={{ cursor: 'pointer', color: FG, display: 'inline-flex', padding: '2px', flexShrink: 0 }}>
+                  <svg width="17" height="17" viewBox="0 0 24 24" fill="none" stroke="currentColor" stroke-width="1.9" stroke-linecap="round" stroke-linejoin="round"><path d="M20 20a2 2 0 0 0 2-2V8a2 2 0 0 0-2-2h-8l-2-2H4a2 2 0 0 0-2 2v12a2 2 0 0 0 2 2Z" /></svg>
+                </span>
+              )}
+              <span style={{ fontSize: '13px', fontWeight: 600, color: FG, whiteSpace: 'nowrap', overflow: 'hidden', textOverflow: 'ellipsis' }}>{tab.path}{dirty ? ' •' : ''}</span>
               <div style={{ marginLeft: 'auto', display: 'flex', gap: '8px' }}>
                 <span onClick={() => download(tab)} title={isEn() ? 'Download' : '다운로드'} style={{ cursor: 'pointer', color: MUTE, display: 'inline-flex', padding: '4px' }}>
                   <svg width="15" height="15" viewBox="0 0 24 24" fill="none" stroke="currentColor" stroke-width="1.9" stroke-linecap="round" stroke-linejoin="round"><path d="M21 15v4a2 2 0 0 1-2 2H5a2 2 0 0 1-2-2v-4" /><path d="M7 10l5 5 5-5" /><path d="M12 15V3" /></svg>
@@ -313,9 +326,18 @@ export function FilesScreen() {
                 : <div ref={editorHost} style={{ flex: 1, minHeight: 0, overflow: 'auto' }} />}
           </>
         ) : (
-          <div style={{ flex: 1, display: 'flex', flexDirection: 'column', alignItems: 'center', justifyContent: 'center', color: MUTE, fontSize: '13.5px', gap: '4px' }}>
-            <div>{isEn() ? 'Select a file from the tree.' : '왼쪽 트리에서 파일을 선택하세요.'}</div>
-            <div style={{ fontSize: '12px', opacity: 0.7 }}>{isEn() ? 'Drag files in to upload · drag items to move' : '파일을 끌어다 놓으면 업로드 · 항목 드래그로 이동'}</div>
+          <div style={{ flex: 1, display: 'flex', flexDirection: 'column', alignItems: 'center', justifyContent: 'center', color: MUTE, fontSize: '13.5px', gap: '10px' }}>
+            {mobile ? (
+              <>
+                <div>{isEn() ? 'Open the file tree to pick a file.' : '파일트리를 열어 파일을 선택하세요.'}</div>
+                <Btn variant="primary" small onClick={() => setTreeOpen(true)}>{isEn() ? '📁 Open file tree' : '📁 파일트리 열기'}</Btn>
+              </>
+            ) : (
+              <>
+                <div>{isEn() ? 'Select a file from the tree.' : '왼쪽 트리에서 파일을 선택하세요.'}</div>
+                <div style={{ fontSize: '12px', opacity: 0.7 }}>{isEn() ? 'Drag files in to upload · drag items to move' : '파일을 끌어다 놓으면 업로드 · 항목 드래그로 이동'}</div>
+              </>
+            )}
           </div>
         )}
       </div>
