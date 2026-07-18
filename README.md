@@ -1,3 +1,5 @@
+**한국어** · [English](README.en.md)
+
 # Deskmate
 
 **Claude Code를 "회사 조직"처럼 부리는 웹 플랫폼.**
@@ -123,6 +125,8 @@ npx github:<유저명>/claude-control \
   --name myproject \                # 데이터 공간 분리 (~/.claude-control/myproject)
   --allow 192.168.0.0/16 \          # 접근 허용 IP 대역 (미지정 시 전체 허용)
   --https \                         # 자체 서명 인증서로 HTTPS 기동 (클립보드 등 secure 기능)
+  --lang en \                       # 기동 시 시스템 언어 (UI + 에이전트 응답 언어, ko|en)
+  --no-terminal --no-files \        # 터미널·파일 기능 완전 비활성 (설정에도 미노출, API 차단)
   --driver sdk                      # mock | sdk | auto
 ```
 
@@ -178,7 +182,3 @@ web/      Preact · esbuild 번들 (dist 커밋 — 설치 시 빌드 불필요)
 ```
 
 앱 SQLite가 단일 진실 소스(세션이 죽어도 상태 유지), 드라이버 추상화(mock/sdk), 4계층 지침 구조(서버 로직 → 불변 플랫폼 지침 → 프로젝트 CLAUDE.md → 런타임 설정). 자세한 설계는 [ARCHITECTURE.md](ARCHITECTURE.md).
-
-## 라이선스
-
-미정 (공개 시 결정)

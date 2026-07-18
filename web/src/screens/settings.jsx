@@ -316,7 +316,7 @@ export function SettingsScreen() {
             <span style={{ position: 'absolute', top: '2px', width: '18px', height: '18px', borderRadius: '50%', background: '#fff', boxShadow: '0 1px 2px rgba(0,0,0,0.24)', transition: 'all 0.2s ease', left: store.show_git_menu ? '20px' : '2px' }} />
           </div>
         </div>
-        <div style={{ display: 'flex', alignItems: 'center', gap: '12px', marginTop: '16px', flexWrap: 'wrap', borderTop: `1px solid ${C.line}`, paddingTop: '16px' }}>
+        {!store.disabled?.terminal && <div style={{ display: 'flex', alignItems: 'center', gap: '12px', marginTop: '16px', flexWrap: 'wrap', borderTop: `1px solid ${C.line}`, paddingTop: '16px' }}>
           <div style={{ flex: 1, minWidth: '200px' }}>
             <div style={{ fontSize: '14px', fontWeight: 600 }}>{t('터미널')}</div>
             <div style={{ fontSize: '12.5px', color: C.t58, marginTop: '2px' }}>{t('서버 셸에 접근하는 웹 터미널. 끄면 메뉴·기능·연결이 모두 차단됩니다.')}</div>
@@ -325,8 +325,8 @@ export function SettingsScreen() {
             style={{ width: '40px', height: '22px', borderRadius: '50px', position: 'relative', cursor: 'pointer', flexShrink: 0, transition: 'all 0.2s ease', background: store.terminal_enabled ? C.cta : C.border }}>
             <span style={{ position: 'absolute', top: '2px', width: '18px', height: '18px', borderRadius: '50%', background: '#fff', boxShadow: '0 1px 2px rgba(0,0,0,0.24)', transition: 'all 0.2s ease', left: store.terminal_enabled ? '20px' : '2px' }} />
           </div>
-        </div>
-        <div style={{ display: 'flex', alignItems: 'center', gap: '12px', marginTop: '16px', flexWrap: 'wrap', borderTop: `1px solid ${C.line}`, paddingTop: '16px' }}>
+        </div>}
+        {!store.disabled?.files && <div style={{ display: 'flex', alignItems: 'center', gap: '12px', marginTop: '16px', flexWrap: 'wrap', borderTop: `1px solid ${C.line}`, paddingTop: '16px' }}>
           <div style={{ flex: 1, minWidth: '200px' }}>
             <div style={{ fontSize: '14px', fontWeight: 600 }}>{t('파일')}</div>
             <div style={{ fontSize: '12.5px', color: C.t58, marginTop: '2px' }}>{t('워크스페이스 파일 탐색기·에디터. 끄면 메뉴·파일 API가 모두 차단됩니다.')}</div>
@@ -335,7 +335,7 @@ export function SettingsScreen() {
             style={{ width: '40px', height: '22px', borderRadius: '50px', position: 'relative', cursor: 'pointer', flexShrink: 0, transition: 'all 0.2s ease', background: store.files_enabled ? C.cta : C.border }}>
             <span style={{ position: 'absolute', top: '2px', width: '18px', height: '18px', borderRadius: '50%', background: '#fff', boxShadow: '0 1px 2px rgba(0,0,0,0.24)', transition: 'all 0.2s ease', left: store.files_enabled ? '20px' : '2px' }} />
           </div>
-        </div>
+        </div>}
       </section>
 
       {/* 위험 구역 — 기억/데이터 초기화 */}

@@ -18,6 +18,7 @@ export const store = {
   terminal_enabled: false, // 웹 터미널 기능 on/off
   files_enabled: false,    // 파일 탐색기 on/off (기본 off)
   caps: { git: true, codex: false }, // 서버 기능 감지 결과
+  disabled: { terminal: false, files: false }, // 기동 옵션으로 완전 비활성된 기능
   agents: [], tickets: [], approvals: [], requests: [], events: [],
   threads: [],           // 팀장 채팅방 목록 (방별 독립 세션)
   notif_channels: [],
@@ -53,6 +54,7 @@ export async function loadSnapshot() {
     terminal_enabled: !!s.terminal_enabled,
     files_enabled: s.files_enabled === true,
     caps: s.caps || { git: true, codex: false },
+    disabled: s.disabled || { terminal: false, files: false },
     pendingCount: s.pending_interactions,
     claude_md: s.claude_md,
   });

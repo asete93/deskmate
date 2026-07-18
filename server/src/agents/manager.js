@@ -173,6 +173,10 @@ export function createManager({ db, bus, notify, workDir, uploadsDir, driverKind
       db.setSetting('mode', 'plan');
       db.setSetting('progress', 0);
     }
+    // 기동 옵션 --lang — 명시되면 시스템 언어를 그 값으로 (UI·에이전트 지침 언어)
+    if (['ko', 'en'].includes(process.env.CC_LANG) && db.getSetting('lang', 'ko') !== process.env.CC_LANG) {
+      db.setSetting('lang', process.env.CC_LANG);
+    }
     // 크래시 복구: 미답변 인터랙션은 DB에서 살아있음 → UI에 그대로 노출.
     // (sdk 모드: 답변 도착 시 resume + 답 주입 — sdkDriver.answer가 처리)
     driver.init?.(db.listAgents());
@@ -591,6 +595,7 @@ export function createManager({ db, bus, notify, workDir, uploadsDir, driverKind
       terminal_enabled: db.getSetting('terminal_enabled', false),
       files_enabled: db.getSetting('files_enabled', false),
       caps: ctx.caps || { git: true, codex: false },
+      disabled: ctx.disabled || { terminal: false, files: false },
       pending_interactions: db.listPendingInteractions().length,
       claude_md: readClaudeMd(),
     };

@@ -13,7 +13,8 @@
     "web/index.html",
     "web/dist",
     "README.md",
-    "ARCHITECTURE.md"
+    "ARCHITECTURE.md",
+    "README.en.md"
   ],
   "engines": {
     "node": ">=22.5"

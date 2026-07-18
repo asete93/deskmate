@@ -106,11 +106,12 @@ export function createApi({ db, bus, manager, gitApi, uploadsDir, auth, termHub,
   }));
 
   // ---- 웹 터미널 ----
-  const termGuard = (req, res, next) => { if (!db.getSetting('terminal_enabled', false)) throw new Error('터미널 기능이 꺼져 있습니다'); next(); };
+  const termGuard = (req, res, next) => { if (manager.ctx.disabled?.terminal || !db.getSetting('terminal_enabled', false)) throw new Error('터미널 기능이 꺼져 있습니다'); next(); };
   r.get('/terminals', guard((req, res) => { termGuard(req, res, () => ok(res, termHub.list())); }));
   r.post('/terminals/:id/kill', guard((req, res) => { termHub.kill(req.params.id); ok(res); }));
   r.post('/terminals/:id/rename', guard((req, res) => { termHub.rename(req.params.id, req.body?.title); ok(res); }));
   r.post('/settings/terminal', guard((req, res) => {
+    if (manager.ctx.disabled?.terminal) throw new Error('서버 기동 옵션(--no-terminal)으로 비활성된 기능입니다');
     db.setSetting('terminal_enabled', !!req.body?.enabled);
     bus.settings();
     bus.event('User', 'user', `터미널 기능 ${req.body?.enabled ? '활성화' : '비활성화'}`);
@@ -118,8 +119,9 @@ export function createApi({ db, bus, manager, gitApi, uploadsDir, auth, termHub,
   }));
 
   // ---- 워크스페이스 파일 (탐색기·에디터) ----
-  const fmw = (req, res, next) => { if (!db.getSetting('files_enabled', false)) return res.status(403).json({ error: '파일 기능이 꺼져 있습니다' }); next(); };
+  const fmw = (req, res, next) => { if (manager.ctx.disabled?.files || !db.getSetting('files_enabled', false)) return res.status(403).json({ error: '파일 기능이 꺼져 있습니다' }); next(); };
   r.post('/settings/files', guard((req, res) => {
+    if (manager.ctx.disabled?.files) throw new Error('서버 기동 옵션(--no-files)으로 비활성된 기능입니다');
     db.setSetting('files_enabled', !!req.body?.enabled);
     bus.settings();
     bus.event('User', 'user', `파일 기능 ${req.body?.enabled ? '활성화' : '비활성화'}`);

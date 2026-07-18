@@ -46,6 +46,10 @@ manager.ctx.gitApi = gitApi;
 // 서버 기능 감지 — 없으면 해당 메뉴/기능이 UI에서 비활성 안내된다 (기동은 계속)
 const hasBin = (cmd) => { try { execSync(`${cmd} --version`, { stdio: 'ignore' }); return true; } catch { return false; } };
 manager.ctx.caps = { git: hasBin('git'), codex: hasBin('codex') };
+// --no-terminal / --no-files — 설정과 무관한 완전 비활성 (UI 미노출 + API 차단)
+const disabledSet = new Set(String(process.env.CC_DISABLE || '').split(',').map(x => x.trim()).filter(Boolean));
+manager.ctx.disabled = { terminal: disabledSet.has('terminal'), files: disabledSet.has('files') };
+if (disabledSet.size) console.log(`[deskmate] 기능 비활성: ${[...disabledSet].join(', ')}`);
 if (!manager.ctx.caps.git) console.warn('[claude-control] git 미설치 — Git 메뉴 비활성 (설치 후 재시작하면 활성화)');
 manager.init();
 startScheduler({ db, bus, manager });
@@ -124,7 +128,7 @@ server.on('upgrade', (req, socket, head) => {
   const target = pathname === '/ws' ? wss : pathname === '/term' ? termWss : null;
   if (!target) { socket.destroy(); return; }
   if (!ipAllowed(req.socket.remoteAddress) || (auth.enabled() && !auth.isAuthed(req))) { socket.destroy(); return; }
-  if (pathname === '/term' && !db.getSetting('terminal_enabled', false)) { socket.destroy(); return; }
+  if (pathname === '/term' && (manager.ctx.disabled?.terminal || !db.getSetting('terminal_enabled', false))) { socket.destroy(); return; }
   target.handleUpgrade(req, socket, head, (ws) => target.emit('connection', ws, req));
 });
 wss.on('connection', (ws) => bus.addClient(ws));

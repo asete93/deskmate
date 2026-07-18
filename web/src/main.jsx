@@ -42,8 +42,8 @@ function orderedNav() {
     for (const n of NAV) if (!items.includes(n)) items.push(n);
   }
   if (!store.show_git_menu || store.caps?.git === false) items = items.filter(n => n.key !== 'git');
-  if (!store.terminal_enabled) items = items.filter(n => n.key !== 'terminal');
-  if (!store.files_enabled) items = items.filter(n => n.key !== 'files');
+  if (!store.terminal_enabled || store.disabled?.terminal) items = items.filter(n => n.key !== 'terminal');
+  if (!store.files_enabled || store.disabled?.files) items = items.filter(n => n.key !== 'files');
   return items;
 }
 
