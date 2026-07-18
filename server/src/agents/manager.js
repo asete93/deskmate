@@ -618,6 +618,7 @@ export function createManager({ db, bus, notify, workDir, uploadsDir, driverKind
       files_enabled: db.getSetting('files_enabled', false),
       caps: ctx.caps || { git: true, codex: false },
       disabled: ctx.disabled || { terminal: false, files: false },
+      data_dir: process.env.DATA_DIR || '~/.claude-control/default',
       pending_interactions: db.listPendingInteractions().length,
       claude_md: readClaudeMd(),
     };

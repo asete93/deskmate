@@ -1,8 +1,41 @@
-import { store } from './store.js';
+import { store, __setI18n } from './store.js';
 
 // 다국어 — 키는 한국어 원문. 사전에 없는 문자열은 한국어 그대로(폴백).
 // 서버 설정 lang('ko'|'en')이 UI와 에이전트 지침(응답 언어)을 함께 전환한다.
 const EN = {
+  // 토스트 (클라·서버 공용)
+  '.gitignore 저장됨': '.gitignore saved',
+  '미리보기 대상이 없습니다.': 'Nothing to preview.',
+  '보고서가 삭제되었습니다.': 'Report deleted.',
+  '서비스 연결 실패 — 서버 상태를 확인하세요.': 'Connection failed — check the server.',
+  '서비스 연결이 해제되었습니다.': 'Service removed.',
+  '서비스 이름이 변경되었습니다.': 'Service renamed.',
+  '서비스가 등록되었습니다.': 'Service added.',
+  '서비스에 연결할 수 없습니다 — URL을 확인하세요.': 'Cannot reach the service — check the URL.',
+  '실행 일시를 선택하세요.': 'Pick a run time.',
+  '예약 작업이 등록되었습니다.': 'Scheduled job added.',
+  '올바른 URL을 입력하세요.': 'Enter a valid URL.',
+  '이름을 입력하세요.': 'Enter a name.',
+  '이미 등록된 서비스입니다.': 'Service already registered.',
+  '전체 데이터가 초기화되었습니다.': 'All data has been reset.',
+  '제목과 요청 내용을 입력하세요.': 'Enter a title and request.',
+  '지목한 직원에게 전달했습니다.': 'Delivered to the mentioned member.',
+  '현재 연결 중인 서비스는 해제할 수 없습니다.': 'Cannot remove the currently connected service.',
+  'CLAUDE.md 저장 — 각 방의 다음 요청부터 반영됩니다.': 'CLAUDE.md saved — applies from the next request in each room.',
+  'Claude 인증이 만료되었습니다. 호스트에서 claude /login 후 컨테이너를 재시작하세요.': 'Claude auth expired. Run claude /login on the host and restart.',
+  '다음 메시지부터 새 대화입니다 — 이전 기억은 참조되지 않습니다.': 'Next message starts a fresh conversation — previous memory is not referenced.',
+  '대화 내용과 기억을 초기화했습니다.': 'Messages and memory cleared.',
+  '대화 내용을 지웠습니다. 팀장의 기억과 진행 중 작업은 유지됩니다.': "Messages cleared. The Team Lead's memory and in-flight work are kept.",
+  '목표가 저장되었습니다. 다음 요청부터 팀장에게 반영됩니다.': 'Goal saved — applies from the next request.',
+  '방 이름을 변경했습니다.': 'Room renamed.',
+  '채팅방을 삭제했습니다 (대화 이력 포함).': 'Room deleted (including its history).',
+  '팀장·팀원의 기억을 모두 초기화했습니다. 대화 기록·티켓은 유지됩니다.': 'All agent memory reset. Chat history and tickets are kept.',
+  '저장했습니다': 'Saved',
+  '업로드 완료': 'Uploaded',
+  '이동했습니다': 'Moved',
+  '복사했습니다': 'Copied',
+  '.gitignore 수정': '.gitignore edited',
+
   '스펙 내보내기 (JSON)': 'Export spec (JSON)',
   '이 직원의 역할·모델·지침을 파일로 저장해 공유할 수 있습니다.': "Save this member's role, model and instructions as a shareable file.",
 
@@ -281,3 +314,5 @@ const EN = {
 
 export const t = (s) => (store.lang === 'en' && EN[s]) || s;
 export const isEn = () => store.lang === 'en';
+
+__setI18n({ t, isEn });

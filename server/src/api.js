@@ -31,7 +31,7 @@ export function createApi({ db, bus, manager, gitApi, uploadsDir, auth, termHub,
   };
 
   // ---- 로그인 (단일 계정 — 비밀번호만) ----
-  r.get('/auth-status', (req, res) => ok(res, { enabled: auth.enabled(), has_password: auth.hasPassword(), lang: db.getSetting('lang', 'ko') }));
+  r.get('/auth-status', (req, res) => ok(res, { enabled: auth.enabled(), has_password: auth.hasPassword(), lang: db.getSetting('lang', 'ko'), data_dir: process.env.DATA_DIR || '~/.claude-control/default' }));
   r.post('/login', guard(async (req, res) => {
     // IP는 소켓 기준 — X-Forwarded-For는 직결 공격자가 위조해 IP별 잠금을 우회할 수 있어 신뢰하지 않는다.
     // (리버스 프록시 뒤 배포 시 app.set('trust proxy') + req.ip로 조정)

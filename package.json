@@ -14,7 +14,8 @@
     "web/dist",
     "README.md",
     "ARCHITECTURE.md",
-    "README.en.md"
+    "README.en.md",
+    "LICENSE"
   ],
   "engines": {
     "node": ">=22.5"
@@ -53,5 +54,6 @@
     "esbuild": "^0.24.0",
     "marked": "^18.0.6",
     "preact": "^10.25.0"
-  }
+  },
+  "license": "MIT"
 }

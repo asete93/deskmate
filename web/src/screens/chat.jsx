@@ -663,7 +663,7 @@ export function RoomList({ current }) {
     catch (e) { showToast(e.message); }
   };
   const remove = async (th) => {
-    if (!confirm(`"${th.title}" 방을 삭제할까요?\n이 방의 대화 이력과 기억이 모두 삭제됩니다.`)) return;
+    if (!confirm(isEn() ? `Delete room "${th.title}"?\nIts history and memory will be erased.` : `"${th.title}" 방을 삭제할까요?\n이 방의 대화 이력과 기억이 모두 삭제됩니다.`)) return;
     try {
       await api.del(`/threads/${encodeURIComponent(th.channel)}`);
       if (th.channel === current) nav('chat', 'main');
@@ -743,7 +743,7 @@ export function ThreadSwitcher({ current, onPick, light = false }) {
   };
   const remove = async (e, th) => {
     e.stopPropagation();
-    if (!confirm(`"${th.title}" 방을 삭제할까요?\n이 방의 대화 이력과 기억이 모두 삭제됩니다.`)) return;
+    if (!confirm(isEn() ? `Delete room "${th.title}"?\nIts history and memory will be erased.` : `"${th.title}" 방을 삭제할까요?\n이 방의 대화 이력과 기억이 모두 삭제됩니다.`)) return;
     try {
       await api.del(`/threads/${encodeURIComponent(th.channel)}`);
       if (th.channel === current) onPick('main');

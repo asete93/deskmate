@@ -7,7 +7,7 @@ import { I } from '../icons.jsx';
 import { nav } from '../main.jsx';
 import { MessageList, ChatInput, AgentSwitcher } from './chat.jsx';
 import { OrgScreen } from './org.jsx';
-import { t } from '../i18n.js';
+import { t, isEn } from '../i18n.js';
 
 export function CfgPanel({ agent, small }) {
   const [nameDraft, setNameDraft] = useState(null);
@@ -192,7 +192,7 @@ export function SubsScreen({ param, openAi }) {
         <div style={{ marginLeft: 'auto', display: 'flex', alignItems: 'center', gap: '8px' }}>
           <StatusPill bg={st.bg} color={st.color}>{st.label}</StatusPill>
           <span onClick={() => {
-            if (confirm(`${sel.name}의 대화를 초기화할까요?\n대화 내용과 기억이 모두 지워집니다. (누적 세션이 길어지면 토큰이 낭비됩니다)`)) {
+            if (confirm(isEn() ? `Clear ${sel.name}'s conversation?\nAll messages and memory will be erased. (Long sessions waste tokens)` : `${sel.name}의 대화를 초기화할까요?\n대화 내용과 기억이 모두 지워집니다. (누적 세션이 길어지면 토큰이 낭비됩니다)`)) {
               api.post(`/threads/${encodeURIComponent(`sub:${sel.id}`)}/clear`).catch(e => showToast(e.message));
             }
           }} title={t('대화 초기화 — 이 팀원의 대화 내용과 기억을 비웁니다')} style={iconBtn(false)}>

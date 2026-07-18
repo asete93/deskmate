@@ -33,7 +33,32 @@ export const store = {
 let ws = null;
 let toastTimer = null;
 
+// 토스트 번역 — 고정문은 사전(t), 서버 템플릿형은 패턴 치환 (EN 모드에서만)
+const TOAST_PATTERNS = [
+  [/^(.+?)이\(가\) (선택|수정 승인|산출물 검토|입력|응답)을 기다립니다 — 채팅에서 카드를 확인하세요\.$/, (m) => `${m[1]} is waiting for your ${({ '선택': 'choice', '수정 승인': 'edit approval', '산출물 검토': 'artifact review', '입력': 'input', '응답': 'reply' })[m[2]]} — check the card in chat.`],
+  [/^팀장이 결재를 요청했습니다 — (.+)$/, (m) => `The Team Lead filed an approval — ${m[1]}`],
+  [/^(.+?) 입사 — 바로 업무 지시가 가능합니다\.$/, (m) => `${m[1]} joined — ready for assignments.`],
+  [/^(.+?) 에이전트가 연동되었습니다\.$/, (m) => `${m[1]} connected.`],
+  [/^(.+?)의 진행 중 작업을 중단했습니다\.$/, (m) => `Interrupted ${m[1]}'s current work.`],
+  [/^(.+?) 해고됨\. 진행 중 작업은 팀장이 회수·재분배합니다\.$/, (m) => `${m[1]} dismissed. The Team Lead reclaims and reassigns their work.`],
+  [/^Auto Mode 전환 — 대기 중이던 수정 승인 (\d+)건 자동 처리\.$/, (m) => `Auto Mode — ${m[1]} pending edit approvals auto-processed.`],
+  [/^커밋 완료 — (.+)$/, (m) => `Committed — ${m[1]}`],
+  [/^커밋 메시지 자동 생성 — (.+)$/, (m) => `Auto-generated commit message — ${m[1]}`],
+];
+function translateToast(text) {
+  if (store.lang !== 'en' || !/[가-힣]/.test(text)) return text;
+  const { t } = require_i18n();
+  const viaDict = t(text);
+  if (viaDict !== text) return viaDict;
+  for (const [re, fn] of TOAST_PATTERNS) { const m = text.match(re); if (m) return fn(m); }
+  return text;
+}
+let _i18n = null;
+function require_i18n() { return _i18n; }
+export function __setI18n(mod) { _i18n = mod; } // i18n.js가 로드 시 자기 자신을 주입 (순환 import 회피)
+
 export function showToast(text) {
+  text = _i18n ? translateToast(text) : text;
   store.toast = text;
   clearTimeout(toastTimer);
   toastTimer = setTimeout(() => { store.toast = null; emit(); }, 2600);
@@ -55,6 +80,7 @@ export async function loadSnapshot() {
     files_enabled: s.files_enabled === true,
     caps: s.caps || { git: true, codex: false },
     disabled: s.disabled || { terminal: false, files: false },
+    data_dir: s.data_dir || '~/.claude-control/<name>',
     pendingCount: s.pending_interactions,
     claude_md: s.claude_md,
   });

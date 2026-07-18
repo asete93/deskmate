@@ -5,7 +5,11 @@
 **A web platform that runs Claude Code like a company.**
 CEO (you) → Team Lead (main agent) → Members (worker agents). Send one chat message and the Team Lead analyzes, decomposes and delegates; members implement; results come back verified, as reports and artifacts.
 
-![Dashboard](docs/screenshots/dashboard.png)
+![Dashboard](docs/screenshots/en-dashboard.png)
+
+> **Prerequisite** — this platform assumes **[Claude Code](https://claude.com/claude-code) is installed and authenticated** on the server (`claude /login` or a subscription token). Without credentials you only get the mock UI preview.
+>
+> **Security notice** — dashboard access equals command execution on your server. **Do not expose it to the open internet; use it inside a private network or a VPN (Tailscale/WireGuard).** If external access is unavoidable, combine login + `--allow` + HTTPS from the security section below.
 
 ## What is this for?
 
@@ -26,7 +30,7 @@ Agents, the web terminal and file editing all operate with server shell privileg
 | Control | How | Notes |
 |---|---|---|
 | **Login** | Settings → Login on | Single password (scrypt hash). 5 failures = 15-min lockout + global attempt cap. Protects API, files, WebSocket, terminal. **Mandatory on public networks** |
-| **Password recovery** | `touch ~/.claude-control/<name>/reset-password` | Shell access = proof of ownership; reset happens on the next login attempt |
+| **Password recovery** | `touch <data-dir>/reset-password` | The data dir is shown on Settings and in the startup banner (default `~/.claude-control/<name>`). Shell access = proof of ownership |
 | **IP firewall** | `--allow 192.168.0.0/16,127.0.0.1/32` | Everything outside the CIDR gets 403. Strongly recommended with 0.0.0.0 binding |
 | **HTTPS** | `--https` | Auto-generated self-signed cert; enables clipboard and other secure-context features |
 | **Feature kill-switch** | `--no-terminal --no-files` | Fully disables the feature: hidden even from Settings, API and connections blocked |
@@ -149,16 +153,16 @@ Updating: if a new commit doesn't show up, `rm -rf ~/.npm/_npx` and rerun, or `n
 
 | | |
 |---|---|
-| ![Chat](docs/screenshots/chat-room.png) | ![Pin review](docs/screenshots/review.png) |
+| ![Chat](docs/screenshots/en-chat-room.png) | ![Pin review](docs/screenshots/en-review.png) |
 | Chat room — delegation, REQ boundaries and tokens in one stream | Pin review — annotate the deliverable, edit text in place |
-| ![Org chart](docs/screenshots/org-chart.png) | ![Approvals](docs/screenshots/approvals.png) |
+| ![Org chart](docs/screenshots/en-org-chart.png) | ![Approvals](docs/screenshots/en-approvals.png) |
 | Company org chart | Approvals — adjust the proposed spec, then approve |
 
-Full feature docs: **[User Guide](docs/USER_GUIDE.md)** (Korean).
+Full feature docs: **[User Guide](docs/USER_GUIDE.en.md)** ([한국어](docs/USER_GUIDE.md)).
 
 ## Data & persistence
 
-- Everything (conversations, rooms, settings, reports, workspace, uploads) lives in `~/.claude-control/<name>/` — survives restarts and fresh npx installs.
+- Everything (conversations, rooms, settings, reports, workspace, uploads) lives in the **data folder** — by default `~/.claude-control/<name>/` (per `--name`), or whatever you pass to `--data <path>`. The actual path is shown in the startup banner and on the Settings screen. It survives restarts and fresh npx installs.
 - Agent memory persists as per-room sessions and resumes after restarts; if a session file is lost, a fresh session starts automatically while chat history stays in the DB.
 - For always-on operation, register a systemd service (auto-start + crash recovery) — see the [deployment section of the User Guide](docs/USER_GUIDE.md#12-배포).
 
@@ -174,4 +178,4 @@ The app SQLite is the single source of truth (state survives dead sessions), a d
 
 ## License
 
-TBD (decided at public release)
+[MIT](LICENSE) — free to use, modify, redistribute and commercialize, as long as the copyright notice is kept. Provided "as is", without warranty.

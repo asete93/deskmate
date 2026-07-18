@@ -447,8 +447,12 @@ export function ExternalAiModal({ onClose }) {
 // 로그인 게이트 — 단일 계정(비밀번호만). 분실 시 서버 로컬에서 reset-password 파일로 초기화.
 function LoginGate() {
   // 로그인 전에는 /state를 못 읽어 언어를 모름 — 공개 라우트인 auth-status에서 lang을 받아 반영
+  const [dataDir, setDataDir] = useState('~/.claude-control/<name>');
   useEffect(() => {
-    api.get('/auth-status').then(r => { if (r.lang && store.lang !== r.lang) { store.lang = r.lang; emitStore(); } }).catch(() => {});
+    api.get('/auth-status').then(r => {
+      if (r.lang && store.lang !== r.lang) { store.lang = r.lang; emitStore(); }
+      if (r.data_dir) setDataDir(r.data_dir);
+    }).catch(() => {});
   }, []);
   const [pw, setPw] = useState('');
   const [err, setErr] = useState('');
@@ -481,8 +485,8 @@ function LoginGate() {
         <Btn variant="primary" onClick={submit} disabled={busy} style={{ width: '100%', marginTop: '14px', justifyContent: 'center' }}>{busy ? '…' : (isEn() ? 'Sign in' : '로그인')}</Btn>
         <div style={{ fontSize: '11.5px', color: C.t58, marginTop: '16px', lineHeight: 1.6, background: '#f9f9f9', borderRadius: '8px', padding: '10px 12px' }}>
           {isEn()
-            ? <>Forgot the password? On the server, create a file named <b>reset-password</b> in the data folder — the next sign-in attempt disables login so you can set a new one.</>
-            : <>비밀번호를 잊으셨나요? 서버에서 데이터 폴더에 <b>reset-password</b> 파일을 만들면(예: <code>touch ~/.claude-control/default/reset-password</code>) 다음 로그인 시도 때 로그인 기능이 해제되어 새로 설정할 수 있습니다.</>}
+            ? <>Forgot the password? On the server, run <code>touch {dataDir}/reset-password</code> — the next sign-in attempt disables login so you can set a new one.</>
+            : <>비밀번호를 잊으셨나요? 서버에서 <code>touch {dataDir}/reset-password</code> 를 실행하면 다음 로그인 시도 때 로그인 기능이 해제되어 새로 설정할 수 있습니다.</>}
         </div>
       </div>
     </div>

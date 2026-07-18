@@ -104,13 +104,13 @@ function SchedulesCard() {
           {repeat === 'once' ? (
             <div>
               <div style={lbl}>{t('실행 일시')}</div>
-              <input type="datetime-local" value={runAt} onInput={e => setRunAt(e.target.value)}
+              <input type="datetime-local" lang={isEn() ? "en" : "ko"} value={runAt} onInput={e => setRunAt(e.target.value)}
                 style={{ border: `1px solid ${C.border}`, borderRadius: '4px', padding: '8px 10px', fontSize: '13px', outlineColor: C.cta }} />
             </div>
           ) : (
             <div>
               <div style={lbl}>{t('시간')}</div>
-              <input type="time" value={atTime} onInput={e => setAtTime(e.target.value)}
+              <input type="time" lang={isEn() ? "en" : "ko"} value={atTime} onInput={e => setAtTime(e.target.value)}
                 style={{ border: `1px solid ${C.border}`, borderRadius: '4px', padding: '8px 10px', fontSize: '13px', outlineColor: C.cta }} />
             </div>
           )}
@@ -173,7 +173,7 @@ function SecurityCard() {
       )}
       <div style={{ fontSize: '11.5px', color: C.t58, marginTop: '12px', lineHeight: 1.6 }}>
         {t('비밀번호 분실 시: 서버의 데이터 폴더에 reset-password 파일을 만들면 다음 로그인 시도 때 초기화됩니다.')}
-        {' '}<code style={{ background: C.ceramic, borderRadius: '4px', padding: '1px 6px', fontSize: '11px' }}>touch ~/.claude-control/default/reset-password</code>
+        {' '}<code style={{ background: C.ceramic, borderRadius: '4px', padding: '1px 6px', fontSize: '11px' }}>touch {store.data_dir}/reset-password</code>
       </div>
     </section>
   );
@@ -371,15 +371,15 @@ export function SettingsScreen() {
         <Modal onClose={() => setResetOpen(false)} maxWidth="460px">
           <div style={{ fontSize: '18px', fontWeight: 600, color: C.danger }}>{t('전체 데이터 초기화')}</div>
           <div style={{ fontSize: '14px', lineHeight: 1.6, marginTop: '12px' }}>
-            이 서비스({store.service.name})의 모든 데이터가 삭제됩니다:
+            {isEn() ? <>All data of this service ({store.service.name}) will be deleted:</> : <>이 서비스({store.service.name})의 모든 데이터가 삭제됩니다:</>}
           </div>
           <ul style={{ margin: '8px 0 0', paddingLeft: '20px', fontSize: '13.5px', lineHeight: 1.7, color: C.t58 }}>
-            <li>대화 이력 · 요청 로그 · 산출 보고서</li>
-            <li>티켓 · 승인 이력 · 타임라인</li>
-            <li>팀원 구성 · 목표 · 설정</li>
-            <li>워크스페이스 파일과 Git 이력 전체</li>
+            <li>{isEn() ? 'Chat history · request logs · reports' : '대화 이력 · 요청 로그 · 산출 보고서'}</li>
+            <li>{isEn() ? 'Tickets · approval history · timeline' : '티켓 · 승인 이력 · 타임라인'}</li>
+            <li>{isEn() ? 'Members · goal · settings' : '팀원 구성 · 목표 · 설정'}</li>
+            <li>{isEn() ? 'All workspace files and Git history' : '워크스페이스 파일과 Git 이력 전체'}</li>
           </ul>
-          <div style={{ fontSize: '13px', color: C.danger, fontWeight: 600, marginTop: '10px' }}>복구할 수 없습니다.</div>
+          <div style={{ fontSize: '13px', color: C.danger, fontWeight: 600, marginTop: '10px' }}>{isEn() ? 'This cannot be undone.' : '복구할 수 없습니다.'}</div>
           <div style={{ fontSize: '12.5px', color: C.t58, marginTop: '14px', marginBottom: '6px' }}>{isEn() ? <>Type <b>RESET</b> to continue.</> : <>계속하려면 <b>초기화</b>라고 입력하세요.</>}</div>
           <Input value={resetText} onInput={e => setResetText(e.target.value)} placeholder={isEn() ? "RESET" : "초기화"} />
           <div style={{ display: 'flex', gap: '10px', justifyContent: 'flex-end', marginTop: '18px' }}>
