@@ -5,10 +5,17 @@
 **A web platform that runs Claude Code like a company.**
 CEO (you) → Team Lead (main agent) → Members (worker agents). Send one chat message and the Team Lead analyzes, decomposes and delegates; members implement; results come back verified, as reports and artifacts.
 
-![Dashboard](docs/screenshots/en-dashboard.png)
+![Demo](docs/screenshots/demo.gif)
 
-> **Prerequisite** — this platform assumes **[Claude Code](https://claude.com/claude-code) is installed and authenticated** on the server (`claude /login` or a subscription token). Without credentials you only get the mock UI preview.
->
+## Requirements
+
+| Item | Details |
+|---|---|
+| **Node.js** | ≥ 22.5 (uses the built-in SQLite; older versions exit with a friendly message) |
+| **Claude Code** | **installed + authenticated** on the server (`claude /login` or `claude setup-token`) — required; without it you only get the mock UI preview |
+| **Claude plan** | Pro/Max subscription (recommended) or an Anthropic API key |
+| Optional | `git` (Git menu), `codex` CLI (external AI members), `tmux` (persistent terminal sessions) |
+
 > **Security notice** — dashboard access equals command execution on your server. **Do not expose it to the open internet; use it inside a private network or a VPN (Tailscale/WireGuard).** If external access is unavoidable, combine login + `--allow` + HTTPS from the security section below.
 
 ## What is this for?
@@ -53,6 +60,11 @@ Honestly: **orchestration itself costs extra tokens.** Deskmate ships the levers
 - **External AI members (Codex)** — offload reviews etc. to OpenAI, spreading Claude usage
 - **Per-REQ token accounting + a live usage widget** — you always see where tokens go
 - Long reports collapse into summary + popup; tickets are auto-created on delegation — fewer formatting turns
+
+## Built-in methodology
+
+- **Karpathy coding guidelines built in** — every agent's immutable constitution applies Andrej Karpathy's LLM-coding principles by default: *think before coding (no guessing) · simplicity first (no over-engineering) · surgical changes (only what was asked) · goal-driven execution (iterate until verified)*.
+- **Advisor strategy** — the Team Lead is locked into an "advisor" position: judgment, briefs and verification only, with implementation delegated to members (its file-editing tools are blocked server-side). The platform enforces the cost structure of expensive models for judgment, cheaper models for labor.
 
 ## Core concepts
 

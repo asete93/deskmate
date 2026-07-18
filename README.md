@@ -7,10 +7,17 @@
 
 > A web platform that runs Claude Code as a company-like AI team — you are the CEO, a Team Lead agent plans & verifies, Worker agents implement.
 
-![대시보드](docs/screenshots/dashboard.png)
+![데모](docs/screenshots/demo.gif)
 
-> **필수 조건** — 이 플랫폼은 서버에 **[Claude Code](https://claude.com/claude-code)가 설치되고 로그인(`claude /login` 또는 구독 토큰)이 완료된 상태**를 전제로 동작합니다. 인증이 없으면 UI 미리보기(mock)만 가능합니다.
->
+## 요구사항
+
+| 항목 | 내용 |
+|---|---|
+| **Node.js** | ≥ 22.5 (내장 SQLite 사용 — 낮으면 안내 후 종료) |
+| **Claude Code** | 서버에 **설치 + 로그인 완료**(`claude /login` 또는 `claude setup-token` 토큰) 필수 — 없으면 UI 미리보기(mock)만 동작 |
+| **Claude 요금제** | Pro/Max 구독(권장) 또는 Anthropic API 키 |
+| 선택 | `git`(Git 메뉴), `codex` CLI(외부 AI 팀원), `tmux`(터미널 세션 영속) |
+
 > **보안 권고** — 대시보드 접근 = 서버 명령 실행 권한입니다. **인터넷에 직접 노출하지 말고, 내부망 또는 VPN(Tailscale/WireGuard 등) 안에서만 사용하세요.** 외부 접근이 꼭 필요하면 아래 보안 섹션의 로그인 + `--allow` + HTTPS를 반드시 조합하세요.
 
 ## 이 플랫폼의 용도
@@ -55,6 +62,11 @@
 - **외부 AI 팀원(Codex)** — 리뷰 등 일부 작업을 OpenAI 쪽으로 오프로드해 Claude 사용량 분산
 - **REQ별 토큰 집계 + 실시간 사용량 위젯** — 어디에 얼마가 쓰이는지 항상 보이므로 낭비 지점을 바로 조정
 - 긴 보고는 요약+원문 팝업으로 분리, 티켓은 위임 시 자동 생성 — 에이전트가 형식 채우느라 쓰는 턴을 최소화
+
+## 내장된 방법론
+
+- **Karpathy 코딩 가이드라인 내장** — 모든 에이전트의 불변 지침에 Andrej Karpathy의 LLM 코딩 원칙이 기본 적용됩니다: *코딩 전에 생각하라(추측 금지) · 단순함 먼저(과설계 금지) · 외과적 변경(요청된 것만) · 목표 기반 실행(검증될 때까지)*.
+- **Advisor 전략** — 팀장은 "조언자" 포지션으로 고정됩니다: 판단·브리프·검증만 수행하고 구현 노동은 팀원에게 위임(파일 편집 툴이 서버 차원에서 차단). 비싼 모델은 판단에, 저렴한 모델은 노동에 쓰는 비용 구조를 플랫폼이 강제합니다.
 
 ## 핵심 개념
 
