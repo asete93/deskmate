@@ -2,6 +2,7 @@ import express from 'express';
 import http from 'node:http';
 import https from 'node:https';
 import path from 'node:path';
+import fs from 'node:fs';
 import { execSync } from 'node:child_process';
 import { fileURLToPath } from 'node:url';
 import { WebSocketServer } from 'ws';
@@ -116,6 +117,25 @@ app.use('/api', createApi({ db, bus, manager, gitApi, uploadsDir: UPLOADS_DIR, a
 app.use('/uploads', express.static(UPLOADS_DIR));
 // 아티팩트 미리보기: 워크스페이스 정적 서빙 — 상대경로 CSS/JS가 그대로 동작
 app.use('/workspace', express.static(WORK_DIR));
+// 채팅 본문의 파일명-만 참조 지원 — /workspace/<basename> 404면 워크스페이스에서 탐색해 리다이렉트
+app.use('/workspace', (req, res) => {
+  const base = path.basename(decodeURIComponent(req.path));
+  if (!/\.(png|jpe?g|gif|webp|svg|html?)$/i.test(base)) return res.status(404).end();
+  const skip = new Set(['node_modules', '.git', 'dist', 'build', '.next']);
+  const queue = [WORK_DIR];
+  let found = null;
+  for (let depth = 0; queue.length && depth < 400 && !found; depth++) {
+    const dir = queue.shift();
+    let ents = [];
+    try { ents = fs.readdirSync(dir, { withFileTypes: true }); } catch { continue; }
+    for (const e of ents) {
+      if (e.isFile() && e.name === base) { found = path.join(dir, e.name); break; }
+      if (e.isDirectory() && !skip.has(e.name) && !e.name.startsWith('.')) queue.push(path.join(dir, e.name));
+    }
+  }
+  if (!found) return res.status(404).end();
+  res.redirect(302, '/workspace/' + path.relative(WORK_DIR, found).split(path.sep).join('/'));
+});
 app.use(express.static(path.join(ROOT, 'web')));
 app.get('/healthz', (req, res) => res.json({ ok: true, service: process.env.SERVICE_NAME || 'Deskmate', driver: driverKind }));
 // SPA 폴백 — 정적 자원 경로(workspace/uploads/dist)는 제외해 미존재 파일이 404로 떨어지게

@@ -353,6 +353,36 @@ export const answerByMessage = (m) => async (payload) => {
   try { await api.post(path, payload); } catch (e) { showToast(e.message); }
 };
 
+// 본문 속 이미지 참조 렌더 — ![alt](path) 마크다운·워크스페이스 상대경로를 인라인 이미지로
+const IMG_MD = /!\[[^\]]*\]\(([^)\s]+)\)/g;
+const IMG_BARE = /(?:^|[\s`("'])((?:[\w~-][\w./~-]*)?[\w-]+\.(?:png|jpe?g|gif|webp|svg))(?=$|[\s`)"',])/gi;
+export function extractImages(text) {
+  if (!text) return [];
+  const out = [];
+  for (const m of text.matchAll(IMG_MD)) out.push(m[1]);
+  for (const m of text.matchAll(IMG_BARE)) out.push(m[1]);
+  const seen = new Set();
+  return out.filter(u => !/^https?:/.test(u) || /\.(png|jpe?g|gif|webp|svg)(\?|$)/i.test(u))
+    .map(u => /^https?:/.test(u) ? u : currentBase() + (u.startsWith('/') ? u : `/workspace/${u.replace(/^\.\//, '')}`))
+    .filter(u => (seen.has(u) ? false : (seen.add(u), true)))
+    .slice(0, 8);
+}
+export function InlineImages({ text }) {
+  const imgs = extractImages(text);
+  if (!imgs.length) return null;
+  return (
+    <div style={{ display: 'flex', flexWrap: 'wrap', gap: '8px', marginTop: '8px' }}>
+      {imgs.map((u, i) => (
+        <a key={i} href={u} target="_blank" rel="noreferrer">
+          <img src={u} alt="" loading="lazy"
+            onError={e => { e.currentTarget.closest('a').style.display = 'none'; }}
+            style={{ maxWidth: '320px', maxHeight: '240px', borderRadius: '10px', border: `1px solid ${C.line}`, display: 'block', background: '#fff' }} />
+        </a>
+      ))}
+    </div>
+  );
+}
+
 // 메시지 첨부 렌더 — 이미지는 미리보기, 그 외는 다운로드 칩
 export function Attachments({ atts, align = 'flex-start' }) {
   if (!atts?.length) return null;
@@ -462,7 +492,7 @@ export function MessageList({ channel, height = null, agentName = '팀장', agen
               <div style={{ fontSize: '12px', fontWeight: 600, color: agentColor, marginBottom: '4px' }}>{head}</div>
               {Card
                 ? <Card m={m} answer={answer(m)} />
-                : <div style={{ background: '#fff', borderRadius: '4px 16px 16px 16px', boxShadow: C.cardShadow, padding: '12px 16px', fontSize: '14.5px', lineHeight: 1.55, whiteSpace: 'pre-wrap', overflowWrap: 'break-word' }}><AgentText text={m.content.text} /></div>}
+                : <div style={{ background: '#fff', borderRadius: '4px 16px 16px 16px', boxShadow: C.cardShadow, padding: '12px 16px', fontSize: '14.5px', lineHeight: 1.55, whiteSpace: 'pre-wrap', overflowWrap: 'break-word' }}><AgentText text={m.content.text} /><InlineImages text={m.content.text} /></div>}
             </div>
           </div>
         );
@@ -628,6 +658,7 @@ export function RoomFeed({ channel, inCard = false }) {
                     <div style={{ background: '#fff', borderRadius: '4px 16px 16px 16px', boxShadow: C.cardShadow, padding: '10px 15px', fontSize: '14px', lineHeight: 1.6, whiteSpace: 'pre-wrap', overflowWrap: 'break-word' }}>
                       <span style={{ fontWeight: 700, color: C.cta }}>{recvName}</span>{' '}
                       <AgentText text={m.content.text} />
+                      <InlineImages text={m.content.text} />
                       <Attachments atts={m.content.attachments} />
                     </div>
                   )}
