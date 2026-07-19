@@ -6,6 +6,7 @@ import { C, Btn, label12 } from '../ui.jsx';
 // 산출 보고서 모달 — 인터랙티브 HTML 렌더 + PPTX/Excel 내보내기.
 // 테마 4종(클래식/문서/대시보드/다크) — 선택은 localStorage에 기억.
 import { useState } from 'preact/hooks';
+import { InlineImages, HtmlChips } from '../refs.jsx';
 
 const THEME_LIST = [
   { key: 'classic', label: '클래식' },
@@ -76,6 +77,8 @@ export function ReportModal({ requestId, report, onClose }) {
     <div style={{ background: T.summaryBg, borderRadius: theme === 'document' ? '0' : '12px', borderLeft: theme === 'document' ? `3px solid ${T.accent}` : 'none', padding: '18px 20px', marginBottom: '16px', boxShadow: theme === 'dashboard' ? C.cardShadow : 'none' }}>
       <div style={{ ...label12, color: theme === 'dark' ? T.accent : label12.color, marginBottom: '8px' }}>SUMMARY</div>
       <div style={{ fontSize: '14.5px', lineHeight: 1.65, color: T.text }}>{report.summary}</div>
+      <InlineImages text={report.summary} />
+      <HtmlChips text={report.summary} />
     </div>
   );
 
@@ -85,6 +88,8 @@ export function ReportModal({ requestId, report, onClose }) {
         {theme === 'document' ? `${i + 1}. ` : ''}{sec.h}
       </div>
       <div style={{ fontSize: '14px', lineHeight: 1.7, color: T.text }}>{sec.b}</div>
+      <InlineImages text={sec.b} />
+      <HtmlChips text={sec.b} />
     </div>
   ));
 
