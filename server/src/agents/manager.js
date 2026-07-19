@@ -238,8 +238,8 @@ export function createManager({ db, bus, notify, workDir, uploadsDir, driverKind
     // (팀장 위임 브리프와 같은 세션을 공유하므로 출처를 명시해야 보고 대상이 갈리지 않음)
     if (!toMain) {
       const langNote = db.getSetting('lang', 'ko') === 'ko'
-        ? '\n\n[시스템: 역할상 다른 언어가 필요한 경우가 아니면 한국어로 답하라]'
-        : '\n\n[System: unless your role requires another language, respond in English]';
+        ? '\n\n[시스템: 역할상 다른 언어가 필요한 경우가 아니면 한국어로 답하라. 이미지를 보여줄 땐 반드시 마크다운 문법 ![설명](워크스페이스 상대경로) 을 메시지에 포함하라 — 문법 없이 말로만 "띄웠다"고 하면 대표님 화면에는 아무것도 보이지 않는다]'
+        : '\n\n[System: unless your role requires another language, respond in English. To show an image, you MUST include markdown ![desc](workspace-relative-path) in the message — without it the CEO sees nothing]';
       outText = `[대표님 직접 문의 — 보고·답변은 대표님에게]\n\n${outText}${langNote}`;
     }
     // 이 에이전트가 이 채널의 카드(선택/폼 등)를 기다리는 중이면 — 세션이 카드에 블록돼

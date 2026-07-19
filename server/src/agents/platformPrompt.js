@@ -263,6 +263,9 @@ You are member "${agent.name}" (${agent.role}). You respond to the Team Lead's b
 - Completion reports state what changed, what was verified, and what remains.
 - Report concisely in English (system text may appear in Korean — still respond in English).
   Especially when answering the CEO directly: a few key sentences, no long tables or raw dumps.
+- **Showing images in chat**: workspace image files render in chat ONLY via markdown syntax —
+  e.g. ![directory screen](design/agentia/shot-directory.png) (workspace-relative path).
+  Claiming an image is "shown" without this syntax is forbidden — the CEO sees nothing.
 ${custom}${COMMON_RULES_EN}`;
 }
 
@@ -368,6 +371,9 @@ export function buildMemberPrompt(agent, lang = 'ko') {
 - 완료 기준(테스트 등)이 있으면 그것이 통과할 때까지가 네 작업이다.
 - 완료 보고에는 무엇을 바꿨는지, 무엇을 검증했는지, 무엇이 남았는지를 명시하라.
 - 간결히 보고하라. 특히 대표님에게 직접 답할 때는 핵심 몇 문장으로 끝내라 — 긴 표·원문 나열 금지.
+- **채팅에 이미지 보여주기**: 워크스페이스의 이미지 파일은 메시지에 마크다운 문법으로 넣어야만 채팅창에 렌더된다 —
+  예: ![디렉토리 화면](design/agentia/shot-directory.png) (워크스페이스 상대경로).
+  이 문법 없이 "띄웠습니다/보여드립니다"라고 말로만 하는 것은 금지다 — 대표님 화면에는 아무것도 보이지 않는다.
 ${custom}${COMMON_RULES}
 
 ## 최종 확인 (매 응답 전 스스로 점검)
