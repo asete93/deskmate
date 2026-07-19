@@ -216,6 +216,7 @@ ${roster}
 - **Deliverable review by the CEO**: mcp__control__ask_artifact_review (blocking) — preview opens as a link popup.
   For an HTML file in the workspace always pass path (relative CSS/JS then works). Inline html strings are a last resort.
 - **Showing images in chat**: reference workspace image files with markdown syntax in your chat message and they render inline — e.g. ![directory screen](design/agentia/shot-directory.png) (workspace-relative path). Never claim an image is "shown" without actually using this syntax.
+- **Showing HTML in chat**: write the workspace-relative path (e.g. reports/news.html) in the message — it renders as a view chip. Prefer the HTML path over screenshots.
 - **Form input**: mcp__control__ask_form (blocking)
 - **Choice questions**: mcp__control__ask_choice (blocking) when 2+ options need an answer
 - **Completion report**: register the deliverable report via mcp__control__submit_report when a REQ completes.
@@ -266,6 +267,7 @@ You are member "${agent.name}" (${agent.role}). You respond to the Team Lead's b
 - **Showing images in chat**: workspace image files render in chat ONLY via markdown syntax —
   e.g. ![directory screen](design/agentia/shot-directory.png) (workspace-relative path).
   Claiming an image is "shown" without this syntax is forbidden — the CEO sees nothing.
+  For HTML files, write the workspace-relative path (e.g. reports/news.html) in the message — it renders as a view chip. Prefer the HTML path over screenshots.
 ${custom}${COMMON_RULES_EN}`;
 }
 
@@ -325,6 +327,7 @@ ${roster}
 - **산출물 대표님 검토**: mcp__control__ask_artifact_review (블로킹) — 미리보기는 링크 팝업으로 열린다.
   워크스페이스의 HTML 파일이면 반드시 path로 전달하라(상대 CSS/JS 정상 동작). html 문자열 인라인은 최후 수단.
 - **채팅에 이미지 보여주기**: 워크스페이스의 이미지 파일은 채팅 메시지에 마크다운 문법으로 넣으면 채팅창에 그대로 렌더된다 — 예: ![디렉토리 화면](design/agentia/shot-directory.png) (워크스페이스 상대경로). "띄웠습니다"라고 말로만 하지 말고 반드시 이 문법을 써라.
+  HTML 파일은 메시지에 상대경로(예: reports/news-2026-07-20.html)를 적으면 채팅에 열람 칩으로 표시된다 — 스크린샷 대신 HTML 원본 경로를 우선 제공하라.
 - **설정값 입력 요청**: mcp__control__ask_form (블로킹)
 - **선택지 질문**: 2개 이상 선택지를 제시하고 답을 받아야 하면 mcp__control__ask_choice (블로킹)
 - **요청 완료 보고서**: 요청(REQ) 처리 완료 시 mcp__control__submit_report로 산출 보고서를 등록한다.
@@ -374,6 +377,7 @@ export function buildMemberPrompt(agent, lang = 'ko') {
 - **채팅에 이미지 보여주기**: 워크스페이스의 이미지 파일은 메시지에 마크다운 문법으로 넣어야만 채팅창에 렌더된다 —
   예: ![디렉토리 화면](design/agentia/shot-directory.png) (워크스페이스 상대경로).
   이 문법 없이 "띄웠습니다/보여드립니다"라고 말로만 하는 것은 금지다 — 대표님 화면에는 아무것도 보이지 않는다.
+  HTML 파일은 상대경로(예: reports/news.html)를 메시지에 적으면 열람 칩으로 표시된다 — 스크린샷보다 HTML 경로를 우선하라.
 ${custom}${COMMON_RULES}
 
 ## 최종 확인 (매 응답 전 스스로 점검)
