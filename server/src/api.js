@@ -93,6 +93,14 @@ export function createApi({ db, bus, manager, gitApi, uploadsDir, auth, termHub,
       mime: f.mimetype,
     })));
   });
+  // 모바일 앱 푸시 토큰 등록 — 알림 이벤트(승인 요청·답변 대기·작업 완료) 발송 대상
+  r.post('/push/register', guard((req, res) => {
+    const token = String(req.body?.token || '').slice(0, 200);
+    if (!/^Expo(nent)?PushToken\[/.test(token)) throw new Error('유효하지 않은 푸시 토큰');
+    const list = db.getSetting('push_tokens', []);
+    if (!list.includes(token)) db.setSetting('push_tokens', [...list, token].slice(-20));
+    ok(res);
+  }));
   r.post('/interactions/:id/answer', guard((req, res) => {
     manager.answerInteraction(Number(req.params.id), req.body || {});
     ok(res);

@@ -1,9 +1,29 @@
 // 알림 채널 발송. Discord/Slack = 웹훅 실발송, Email/카카오톡 = 스텁(로그).
 // 채널 형태: {id, type: discord|slack|email|kakao, target, active}
 export function createNotifier(db) {
+  // 모바일 앱 백그라운드 푸시 — 앱이 등록한 Expo 푸시 토큰으로 발송
+  async function sendPush(kind, text) {
+    const tokens = db.getSetting('push_tokens', []);
+    if (!tokens.length) return;
+    try {
+      const res = await fetch('https://exp.host/--/api/v2/push/send', {
+        method: 'POST', headers: { 'content-type': 'application/json' },
+        body: JSON.stringify(tokens.map(to => ({ to, title: `Deskmate · ${kind}`, body: text, sound: 'default' }))),
+      });
+      const j = await res.json().catch(() => null);
+      // 삭제된 기기의 토큰은 정리
+      const dead = new Set();
+      (j?.data || []).forEach((r, i) => { if (r.status === 'error' && r.details?.error === 'DeviceNotRegistered') dead.add(tokens[i]); });
+      if (dead.size) db.setSetting('push_tokens', tokens.filter(t => !dead.has(t)));
+    } catch (e) {
+      console.error('[notify:push] 발송 실패:', e.message);
+    }
+  }
+
   async function send(kind, text) {
     const channels = db.getSetting('notif_channels', []).filter(c => c.active);
     const body = `[Deskmate] ${kind}: ${text}`;
+    await sendPush(kind, text);
     await Promise.allSettled(channels.map(async (ch) => {
       try {
         if (ch.type === 'discord') {
