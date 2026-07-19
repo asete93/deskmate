@@ -150,8 +150,21 @@ const HOST = process.env.HOST || '0.0.0.0';
 // HTTPS 모드에서 HTTP 병행 리슨 — 모바일 앱(자체 서명 미지원)·구형 클라이언트용.
 // 기본: HTTPS 포트+1. HTTP_PORT=off 로 끄거나 HTTP_PORT=<n> 로 지정.
 const httpPortEnv = String(process.env.HTTP_PORT || '').toLowerCase();
-const httpServer = (tls && httpPortEnv !== 'off') ? http.createServer(app) : null;
-if (httpServer) httpServer.on('upgrade', onUpgrade);
+// HTTP 포트는 모바일 앱 전용 — 앱이 보내는 식별 헤더 없으면 403 (브라우저 평문 접속 차단).
+// 주의: 위장 가능한 헤더라 보안 경계는 아님 — 실제 보호는 로그인 + 내부망/VPN.
+const isAppClient = (req) => req.headers['x-deskmate-client'] === 'app';
+const httpServer = (tls && httpPortEnv !== 'off') ? http.createServer((req, res) => {
+  if (!isAppClient(req)) {
+    res.writeHead(403, { 'content-type': 'text/plain; charset=utf-8' });
+    res.end('This HTTP port is for the Deskmate mobile app only. Use HTTPS in a browser.');
+    return;
+  }
+  app(req, res);
+}) : null;
+if (httpServer) httpServer.on('upgrade', (req, socket, head) => {
+  if (!isAppClient(req)) { socket.destroy(); return; }
+  onUpgrade(req, socket, head);
+});
 
 server.listen(PORT, HOST, () => {
   const actualPort = server.address().port; // PORT=0(auto)이면 OS가 할당한 실제 포트
@@ -161,7 +174,7 @@ server.listen(PORT, HOST, () => {
     console.log('┌──────────────────────────────────────────────────');
     console.log(`│  ${process.env.SERVICE_NAME || 'Deskmate'}`);
     console.log(`│  ▶ ${scheme}://${shownHost}:${actualPort}  (bind ${HOST}:${actualPort})`);
-    if (httpPort) console.log(`│  ▶ http://${shownHost}:${httpPort}  (모바일 앱·비TLS 클라이언트용 병행 리슨)`);
+    if (httpPort) console.log(`│  ▶ http://${shownHost}:${httpPort}  (모바일 앱 전용 — 브라우저 403)`);
     if (tls) console.log('│  (자체 서명 인증서 — 브라우저 최초 경고는 "계속 진행"으로 통과)');
     if (useHttps && !tls) console.log('│  ⚠ HTTPS 요청됐으나 openssl 없어 HTTP로 폴백');
     console.log(`│  driver=${driverKind}  data=${DATA_DIR}`);
