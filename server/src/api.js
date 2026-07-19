@@ -93,6 +93,20 @@ export function createApi({ db, bus, manager, gitApi, uploadsDir, auth, termHub,
       mime: f.mimetype,
     })));
   });
+  // 읽음 처리 — 기기 간 동기화 (대표 1인 전제, 채널별 마지막 열람 시각)
+  r.post('/read', guard((req, res) => {
+    const channel = String(req.body?.channel || '');
+    const ts = Math.min(Number(req.body?.ts) || Date.now(), Date.now());
+    if (!channel) throw new Error('channel 필요');
+    const map = db.getSetting('last_read', {});
+    if (ts > (map[channel] || 0)) {
+      map[channel] = ts;
+      db.setSetting('last_read', map);
+      bus.broadcast('read', map);
+    }
+    ok(res);
+  }));
+
   // 모바일 앱 푸시 토큰 등록 — 알림 이벤트(승인 요청·답변 대기·작업 완료) 발송 대상
   r.post('/push/register', guard((req, res) => {
     const token = String(req.body?.token || '').slice(0, 200);

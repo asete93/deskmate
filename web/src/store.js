@@ -84,6 +84,7 @@ export async function loadSnapshot() {
     pendingCount: s.pending_interactions,
     claude_md: s.claude_md,
   });
+  mergeLastRead(s.last_read || {});
   emit();
 }
 
@@ -105,6 +106,14 @@ export async function loadAllChat() {
 // 스코프 키 = 채널: 채팅방('main'/'main:N'/'team') 또는 팀원 1:1('sub:<id>').
 // 마지막 열람 시각은 localStorage — 데이터 근원은 allChat(부트 시 로드 + WS 증분).
 const lastRead = JSON.parse(localStorage.getItem('cc_last_read') || '{}');
+// 서버 동기화 — 부트/재연결 시 서버 값과 병합(max), 다른 기기의 읽음이 실시간 반영된다
+export function mergeLastRead(map) {
+  let changed = false;
+  for (const [k, ts] of Object.entries(map || {})) {
+    if (ts > (lastRead[k] || 0)) { lastRead[k] = ts; changed = true; }
+  }
+  if (changed) { localStorage.setItem('cc_last_read', JSON.stringify(lastRead)); emit(); }
+}
 const isRoom = (ch) => ch === 'main' || (ch || '').startsWith('main:');
 const inScope = (key, m) => m.channel === key;
 // 방은 위임 대화 포함 전부, 팀원 1:1은 대표 수신 메시지만 센다
@@ -117,7 +126,10 @@ export function markRead(...keys) {
   let changed = false;
   for (const key of keys) {
     const maxTs = (store.allChat || []).reduce((a, m) => (inScope(key, m) && m.ts > a ? m.ts : a), 0);
-    if (maxTs > (lastRead[key] || 0)) { lastRead[key] = maxTs; changed = true; }
+    if (maxTs > (lastRead[key] || 0)) {
+      lastRead[key] = maxTs; changed = true;
+      api.post('/read', { channel: key, ts: maxTs }).catch(() => { /* 오프라인이면 다음 markRead에서 재시도 */ });
+    }
   }
   if (changed) { localStorage.setItem('cc_last_read', JSON.stringify(lastRead)); emit(); }
 }
@@ -162,6 +174,8 @@ export function connectWs() {
       store.approvals = payload;
     } else if (type === 'requests') {
       store.requests = payload;
+    } else if (type === 'read') {
+      mergeLastRead(payload);
     } else if (type === 'threads') {
       store.threads = payload;
     } else if (type === 'thread_cleared') {

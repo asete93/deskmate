@@ -604,6 +604,7 @@ export function createManager({ db, bus, notify, workDir, uploadsDir, driverKind
       lang: db.getSetting('lang', 'ko'),
       auth: { enabled: !!db.getSetting('auth_enabled', false), has_password: !!db.getSetting('auth_hash', null) },
       mode: db.getSetting('mode', 'plan'),
+      last_read: db.getSetting('last_read', {}),
       progress: db.getSetting('progress', 0),
       agents: db.listAgents(),
       tickets: db.listTickets(),
