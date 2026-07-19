@@ -41,7 +41,7 @@ function pasteInto(send) {
 }
 
 // ── 단일 터미널 뷰 — 최초 1회만 연결, sid는 ref로 유지해 재연결/언마운트 없음(세션 영속). ──
-function TermPane({ sid, ephemeral = false, onSid, fontSize = 13, onFont }) {
+function TermPane({ sid, ephemeral = false, onSid, fontSize = 13, onFont, paneId = null, screenApi = null }) {
   const host = useRef(null);
   const tmuxRef = useRef(true); // 백엔드 종류 (ready 메시지로 갱신)
   const sidRef = useRef(sid);
@@ -121,6 +121,12 @@ function TermPane({ sid, ephemeral = false, onSid, fontSize = 13, onFont }) {
     const sendTxt = (t) => { if (wsRef.current?.readyState === 1) wsRef.current.send(t); };
     // 복사·붙여넣기: 키(Ctrl/Cmd+Shift+C/V) + 우클릭(선택 있으면 복사+해제, 없으면 붙여넣기)
     term.attachCustomKeyEventHandler((e) => {
+      // Ctrl+방향키 = 분할 창 포커스 이동 (이동할 창이 있을 때만 가로챔 — 단일 창에선 셸의 word 이동 유지)
+      if (e.type === 'keydown' && e.ctrlKey && !e.shiftKey && !e.altKey && !e.metaKey
+        && ['ArrowLeft', 'ArrowRight', 'ArrowUp', 'ArrowDown'].includes(e.key)) {
+        const dir = e.key.slice(5).toLowerCase();
+        if (screenApi?.current?.moveFocus?.(paneId, dir)) return false;
+      }
       const mod = e.ctrlKey || e.metaKey;
       if (e.type === 'keydown' && mod && (e.shiftKey || e.metaKey)) {
         const k = e.key.toLowerCase();
@@ -147,7 +153,13 @@ function TermPane({ sid, ephemeral = false, onSid, fontSize = 13, onFont }) {
     window.addEventListener('resize', doFit);
     // 재연결용
     host.current.__reconnect = () => { try { wsRef.current?.close(); } catch { /* noop */ } connect(term); };
-    return () => { ro.disconnect(); window.removeEventListener('resize', doFit); host.current?.removeEventListener('contextmenu', onCtx); host.current?.removeEventListener('wheel', onWheel); try { wsRef.current?.close(); } catch { /* noop */ } term.dispose(); };
+    if (screenApi && paneId) screenApi.current.panes[paneId] = { focus: () => { try { term.focus(); } catch { /* noop */ } } };
+    // 포커스된 창 표시 — 루트 컨테이너에 민트 링
+    const rootEl = host.current?.parentElement?.parentElement;
+    const setRing = (on) => { if (rootEl) rootEl.style.boxShadow = on ? 'inset 0 0 0 2px rgba(87,201,154,0.75)' : 'none'; };
+    term.textarea?.addEventListener('focus', () => setRing(true));
+    term.textarea?.addEventListener('blur', () => setRing(false));
+    return () => { if (screenApi && paneId) delete screenApi.current.panes[paneId]; ro.disconnect(); window.removeEventListener('resize', doFit); host.current?.removeEventListener('contextmenu', onCtx); host.current?.removeEventListener('wheel', onWheel); try { wsRef.current?.close(); } catch { /* noop */ } term.dispose(); };
   }, []); // 최초 1회 — 언마운트 전까지 세션 유지
 
   const dot = status === 'open' ? C.cta : status === 'connecting' ? C.gold : C.danger;
@@ -215,6 +227,7 @@ export function TerminalScreen() {
   const [overId, setOverId] = useState(null);
   const [, bump] = useState(0);
   const boxRef = useRef(null);
+  const screenApiRef = useRef({ panes: {}, rects: [], moveFocus: null }); // 창 포커스 이동 API
 
   const save = (t) => { try { localStorage.setItem('cc_term_layout', JSON.stringify({ tree: t, _seq: nodeSeq })); } catch { /* noop */ } };
   const setLeafSid = (id, sid) => setTree(prev => { const l = findLeaf(prev, id); if (!l) return prev; const n = replaceLeaf(prev, id, { ...l, sid }); save(n); return n; });
@@ -248,6 +261,43 @@ export function TerminalScreen() {
 
   const rects = []; const divs = [];
   if (!mobile && size.w > 0) computeRects(tree, 0, 0, size.w, size.h, rects, divs);
+
+  // Ctrl+방향키 포커스 이동 — 현재 창 중심 기준, 해당 방향의 가장 가까운 창으로
+  screenApiRef.current.rects = rects;
+  screenApiRef.current.moveFocus = (fromId, dir) => {
+    const rs = screenApiRef.current.rects || [];
+    const cur = rs.find(r => r.id === fromId);
+    if (!cur || rs.length < 2) return false;
+    // 엣지 기준 후보: 실제로 그 방향 너머에 있는 창만 (중심 비교는 넓은 창에 오판)
+    const horiz = dir === 'left' || dir === 'right';
+    const cands = rs.filter(r => {
+      if (r.id === fromId) return false;
+      if (dir === 'right') return r.x >= cur.x + cur.w - 2;
+      if (dir === 'left') return r.x + r.w <= cur.x + 2;
+      if (dir === 'down') return r.y >= cur.y + cur.h - 2;
+      return r.y + r.h <= cur.y + 2;
+    });
+    if (!cands.length) return false;
+    // 직교축 겹침 계산 — 겹치는 창(같은 행/열) 우선, 그중 주축 거리 최소 → 부축 중심차 최소
+    const overlap = (r) => horiz
+      ? Math.min(cur.y + cur.h, r.y + r.h) - Math.max(cur.y, r.y)
+      : Math.min(cur.x + cur.w, r.x + r.w) - Math.max(cur.x, r.x);
+    const mainDist = (r) => dir === 'right' ? r.x - (cur.x + cur.w)
+      : dir === 'left' ? cur.x - (r.x + r.w)
+      : dir === 'down' ? r.y - (cur.y + cur.h)
+      : cur.y - (r.y + r.h);
+    const crossDist = (r) => horiz
+      ? Math.abs((r.y + r.h / 2) - (cur.y + cur.h / 2))
+      : Math.abs((r.x + r.w / 2) - (cur.x + cur.w / 2));
+    cands.sort((a, b) => {
+      const oa = overlap(a) > 0 ? 0 : 1, ob = overlap(b) > 0 ? 0 : 1;
+      if (oa !== ob) return oa - ob;
+      if (mainDist(a) !== mainDist(b)) return mainDist(a) - mainDist(b);
+      return crossDist(a) - crossDist(b);
+    });
+    screenApiRef.current.panes[cands[0].id]?.focus();
+    return true;
+  };
 
   const startDrag = (d) => (e) => {
     e.preventDefault();
@@ -313,7 +363,7 @@ export function TerminalScreen() {
                 </div>
               )}
               {overId === id && <div style={{ position: 'absolute', inset: 0, zIndex: 6, border: `2px solid ${C.cta}`, borderRadius: '8px', background: 'rgba(0,117,74,0.12)', pointerEvents: 'none' }} />}
-              <TermPane sid={l?.sid} onSid={s => setLeafSid(id, s)} fontSize={fonts[id] || 13} onFont={fn => setFont(id, fn)} />
+              <TermPane sid={l?.sid} onSid={s => setLeafSid(id, s)} fontSize={fonts[id] || 13} onFont={fn => setFont(id, fn)} paneId={id} screenApi={screenApiRef} />
             </div>
           );
         })}

@@ -130,14 +130,15 @@ const wss = new WebSocketServer({ noServer: true });      // 실시간 상태 (/
 const termWss = new WebSocketServer({ noServer: true });  // 웹 터미널 (/term)
 
 // WS 공통 게이트: IP 대역 + 로그인 — 통과 못 하면 핸드셰이크 자체를 거부
-server.on('upgrade', (req, socket, head) => {
+const onUpgrade = (req, socket, head) => {
   const pathname = (() => { try { return new URL(req.url, 'http://x').pathname; } catch { return ''; } })();
   const target = pathname === '/ws' ? wss : pathname === '/term' ? termWss : null;
   if (!target) { socket.destroy(); return; }
   if (!ipAllowed(req.socket.remoteAddress) || (auth.enabled() && !auth.isAuthed(req))) { socket.destroy(); return; }
   if (pathname === '/term' && (manager.ctx.disabled?.terminal || !db.getSetting('terminal_enabled', false))) { socket.destroy(); return; }
   target.handleUpgrade(req, socket, head, (ws) => target.emit('connection', ws, req));
-});
+};
+server.on('upgrade', onUpgrade);
 wss.on('connection', (ws) => bus.addClient(ws));
 // 웹 터미널 — 세션 허브에 연결 (세션은 WS와 독립적으로 영속)
 termWss.on('connection', (ws, req) => termHub.attach(ws, req));
@@ -146,16 +147,29 @@ termWss.on('connection', (ws, req) => termHub.attach(ws, req));
 // localhost가 127.0.0.1로 풀리는 환경에서 접속 거부되는 문제 방지.
 // 로컬 전용으로 묶으려면 HOST=127.0.0.1.
 const HOST = process.env.HOST || '0.0.0.0';
+// HTTPS 모드에서 HTTP 병행 리슨 — 모바일 앱(자체 서명 미지원)·구형 클라이언트용.
+// 기본: HTTPS 포트+1. HTTP_PORT=off 로 끄거나 HTTP_PORT=<n> 로 지정.
+const httpPortEnv = String(process.env.HTTP_PORT || '').toLowerCase();
+const httpServer = (tls && httpPortEnv !== 'off') ? http.createServer(app) : null;
+if (httpServer) httpServer.on('upgrade', onUpgrade);
+
 server.listen(PORT, HOST, () => {
   const actualPort = server.address().port; // PORT=0(auto)이면 OS가 할당한 실제 포트
   const shownHost = HOST === '0.0.0.0' ? 'localhost' : HOST;
-  console.log('');
-  console.log('┌──────────────────────────────────────────────────');
-  console.log(`│  ${process.env.SERVICE_NAME || 'Deskmate'}`);
-  console.log(`│  ▶ ${scheme}://${shownHost}:${actualPort}  (bind ${HOST}:${actualPort})`);
-  if (tls) console.log('│  (자체 서명 인증서 — 브라우저 최초 경고는 "계속 진행"으로 통과)');
-  if (useHttps && !tls) console.log('│  ⚠ HTTPS 요청됐으나 openssl 없어 HTTP로 폴백');
-  console.log(`│  driver=${driverKind}  data=${DATA_DIR}`);
-  if (ALLOW.length) console.log(`│  allow=${process.env.ALLOW_CIDR}`);
-  console.log('└──────────────────────────────────────────────────');
+  const banner = (httpPort) => {
+    console.log('');
+    console.log('┌──────────────────────────────────────────────────');
+    console.log(`│  ${process.env.SERVICE_NAME || 'Deskmate'}`);
+    console.log(`│  ▶ ${scheme}://${shownHost}:${actualPort}  (bind ${HOST}:${actualPort})`);
+    if (httpPort) console.log(`│  ▶ http://${shownHost}:${httpPort}  (모바일 앱·비TLS 클라이언트용 병행 리슨)`);
+    if (tls) console.log('│  (자체 서명 인증서 — 브라우저 최초 경고는 "계속 진행"으로 통과)');
+    if (useHttps && !tls) console.log('│  ⚠ HTTPS 요청됐으나 openssl 없어 HTTP로 폴백');
+    console.log(`│  driver=${driverKind}  data=${DATA_DIR}`);
+    if (ALLOW.length) console.log(`│  allow=${process.env.ALLOW_CIDR}`);
+    console.log('└──────────────────────────────────────────────────');
+  };
+  if (!httpServer) { banner(null); return; }
+  const wantHttp = /^\d+$/.test(httpPortEnv) ? Number(httpPortEnv) : actualPort + 1;
+  httpServer.once('error', (e) => { console.warn(`[deskmate] HTTP 병행 리슨 실패(${e.code}) — HTTPS 단독으로 계속`); banner(null); });
+  httpServer.listen(wantHttp, HOST, () => banner(httpServer.address().port));
 });

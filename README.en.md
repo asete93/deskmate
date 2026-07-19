@@ -40,6 +40,7 @@ Agents, the web terminal and file editing all operate with server shell privileg
 | **Password recovery** | `touch <data-dir>/reset-password` | The data dir is shown on Settings and in the startup banner (default `~/.claude-control/<name>`). Shell access = proof of ownership |
 | **IP firewall** | `--allow 192.168.0.0/16,127.0.0.1/32` | Everything outside the CIDR gets 403. Strongly recommended with 0.0.0.0 binding |
 | **HTTPS** | `--https` | Auto-generated self-signed cert; enables clipboard and other secure-context features |
+| **Parallel HTTP** | `--http-port <n\|off>` | With `--https`, also listen on plain HTTP (default: HTTPS port + 1, `off` = HTTPS only). For clients that reject self-signed TLS (e.g. mobile app) |
 | **Feature kill-switch** | `--no-terminal --no-files` | Fully disables the feature: hidden even from Settings, API and connections blocked |
 
 Also: the workspace file API blocks path traversal (`../`); structural changes such as hiring members are refused by the server without CEO approval (enforced in server logic, not prompts). For direct internet exposure, use a TLS reverse proxy + login + `--allow` together.
@@ -139,6 +140,7 @@ npx github:asete93/deskmate \
   --name myproject \                # separate data space (~/.claude-control/myproject)
   --allow 192.168.0.0/16 \          # allowed IP ranges (all allowed if omitted)
   --https \                         # self-signed HTTPS (clipboard & secure-context features)
+  --http-port 3201 \                # listen on HTTP alongside HTTPS (default: HTTPS port + 1, off = disable)
   --lang en \                       # system language at boot (UI + agent language)
   --no-terminal --no-files \        # hard-disable terminal/files (hidden even in Settings)
   --driver sdk                      # mock | sdk | auto
