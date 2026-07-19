@@ -50,5 +50,7 @@ export function createNotifier(db) {
     approvalRequested: (t) => send('승인 요청', t),
     answerNeeded: (t) => send('답변 대기', t),
     workDone: (t) => send('작업 완료', t),
+    // 채팅 응답(완료 보고 등)은 모바일 푸시만 — 웹훅 채널까지 보내면 스팸이 된다
+    chatReply: (t) => sendPush('새 메시지', t),
   };
 }
