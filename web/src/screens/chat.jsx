@@ -129,9 +129,21 @@ function ArtifactCard({ m, answer }) {
       showToast('미리보기 대상이 없습니다.');
     }
   };
+  const full = art.url ? (art.url.startsWith('http') ? art.url : currentBase() + art.url) : null;
+  const isImg = full && /\.(png|jpe?g|gif|webp|svg)(\?|$)/i.test(full);
+  const isHtml = full && /\.(html?|svg)(\?|$)/i.test(full);
   return (
     <div style={card({ padding: '20px' })}>
       <div style={{ fontSize: '14.5px', lineHeight: 1.55, marginBottom: '14px', whiteSpace: 'pre-wrap' }}>{c.text}</div>
+      {/* 이미지·HTML은 채팅 안에서 바로 미리보기 */}
+      {isImg && (
+        <img src={full} alt={art.title || ''} onClick={openPreview}
+          style={{ maxWidth: '100%', maxHeight: '420px', borderRadius: '12px', border: `1px solid ${C.line}`, cursor: 'zoom-in', display: 'block', marginBottom: '12px', background: '#fff' }} />
+      )}
+      {!isImg && isHtml && (
+        <iframe src={full} title={art.title || 'artifact'}
+          style={{ width: '100%', height: '380px', border: `1px solid ${C.line}`, borderRadius: '12px', background: '#fff', marginBottom: '12px' }} />
+      )}
       <div onClick={openPreview}
         style={{ display: 'flex', alignItems: 'center', gap: '12px', border: `1px solid ${C.line}`, borderRadius: '12px', background: C.cream, padding: '14px 16px', cursor: 'pointer' }}
         onMouseEnter={e => e.currentTarget.style.borderColor = C.cta}
