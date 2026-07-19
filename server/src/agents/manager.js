@@ -189,6 +189,11 @@ export function createManager({ db, bus, notify, workDir, uploadsDir, driverKind
     }
     // 크래시 복구: 미답변 인터랙션은 DB에서 살아있음 → UI에 그대로 노출.
     // (sdk 모드: 답변 도착 시 resume + 답 주입 — sdkDriver.answer가 처리)
+    // '작업 중' 잔상 정리 — 재시작으로 진행 중이던 턴(세션)은 죽었으므로 idle로.
+    // 'waiting'(카드 응답 대기)은 인터랙션이 영속돼 답변 시 resume되므로 유지한다.
+    for (const a of db.listAgents()) {
+      if (a.status === 'working') db.updateAgent(a.id, { status: 'idle', current_task: '' });
+    }
     driver.init?.(db.listAgents());
   }
 
