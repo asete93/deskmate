@@ -1,7 +1,8 @@
 import { h, Fragment } from 'preact';
 import { showToast } from '../store.js';
-import { currentBase } from '../api.js';
+import { api, currentBase } from '../api.js';
 import { C, Btn, label12 } from '../ui.jsx';
+import { t } from '../i18n.js';
 
 // 산출 보고서 모달 — 인터랙티브 HTML 렌더 + PPTX/Excel 내보내기.
 // 테마 4종(클래식/문서/대시보드/다크) — 선택은 localStorage에 기억.
@@ -104,6 +105,9 @@ export function ReportModal({ requestId, report, onClose }) {
             <div style={{ fontSize: '11px', fontWeight: 700, letterSpacing: '0.14em', color: T.accent }}>REPORT</div>
             <div style={{ fontSize: theme === 'document' ? '19px' : '17px', fontWeight: 600, marginTop: '2px', fontFamily: hFont }}>{report.title}</div>
           </div>
+          {report.acked_ts
+            ? <span style={{ fontSize: '12px', fontWeight: 700, color: T.accent }}>✓ {t('확인 완료')}</span>
+            : <Btn variant="outline" small onClick={async () => { try { await api.post(`/requests/${requestId}/report/ack`); showToast(t('보고서를 확인 완료로 표시했습니다.')); } catch (e) { showToast(e.message); } }}>{t('확인 완료')}</Btn>}
           <Btn variant="primary" small onClick={() => download('pptx')}>PPTX</Btn>
           <Btn variant="primary" small onClick={() => download('xlsx')}>Excel</Btn>
           <span onClick={onClose} style={{ cursor: 'pointer', fontSize: '18px', color: theme === 'classic' || theme === 'dark' ? 'rgba(255,255,255,0.8)' : C.t58, padding: '0 4px' }}>✕</span>

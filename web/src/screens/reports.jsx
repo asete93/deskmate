@@ -44,6 +44,9 @@ export function ReportsScreen({ param }) {
           <div style={{ fontSize: '12.5px', color: C.t58, marginTop: '4px' }}>{r.report.subtitle} · 작성 {r.report.author || '팀장'}</div>
           <div style={{ display: 'flex', gap: '8px', marginTop: '12px', flexWrap: 'wrap' }}>
             <Btn variant="primary" small onClick={() => setOpenId(r.id)}>{t('열람')}</Btn>
+            {r.report.acked_ts
+              ? <Chip bg={C.mint} color={C.heading}>✓ {t('확인 완료')} · {fmtDateTime(r.report.acked_ts)}</Chip>
+              : <Btn variant="outline" small onClick={async () => { try { await api.post(`/requests/${r.id}/report/ack`); showToast(t('보고서를 확인 완료로 표시했습니다.')); } catch (e) { showToast(e.message); } }}>{t('확인 완료')}</Btn>}
             <Btn variant="outline" small onClick={() => download(r.id, 'pptx')}>PPTX</Btn>
             <Btn variant="outline" small onClick={() => download(r.id, 'xlsx')}>Excel</Btn>
             <Btn variant="danger" small style={{ marginLeft: 'auto' }} onClick={() => remove(r.id)}>{t('삭제')}</Btn>

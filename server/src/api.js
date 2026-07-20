@@ -281,6 +281,14 @@ export function createApi({ db, bus, manager, gitApi, uploadsDir, auth, termHub,
   r.get('/requests/:id/report.pptx', sendReportFile('pptx'));
   r.get('/requests/:id/report.xlsx', sendReportFile('xlsx'));
   // 보고서 삭제 (관리 화면)
+  // 보고서 확인 완료 — 대표가 열람 확인 표시 (undo 가능)
+  r.post('/requests/:id/report/ack', guard((req, res) => {
+    const rq = db.getRequest(Number(req.params.id));
+    if (!rq?.report) throw new Error('보고서가 없는 요청입니다');
+    db.setRequestReport(rq.id, { ...rq.report, acked_ts: req.body?.undo ? null : Date.now() });
+    bus.requests();
+    ok(res);
+  }));
   r.delete('/requests/:id/report', guard((req, res) => {
     db.clearRequestReport(Number(req.params.id));
     bus.requests();
