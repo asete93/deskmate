@@ -175,7 +175,7 @@ const httpPortEnv = String(process.env.HTTP_PORT || '').toLowerCase();
 const isAppClient = (req) => req.headers['x-deskmate-client'] === 'app'
   // 정적 산출물(이미지·HTML 미리보기)은 예외 — RN Image/WebView가 커스텀 헤더를 못 보낸다.
   // 로그인 켠 서버는 auth 게이트가 토큰 쿼리로 별도 보호.
-  || (req.method === 'GET' && (req.url.startsWith('/workspace/') || req.url.startsWith('/uploads/')));
+  || (['GET', 'HEAD'].includes(req.method) && (req.url.startsWith('/workspace/') || req.url.startsWith('/uploads/')));
 const httpServer = (tls && httpPortEnv !== 'off') ? http.createServer((req, res) => {
   if (!isAppClient(req)) {
     res.writeHead(403, { 'content-type': 'text/plain; charset=utf-8' });

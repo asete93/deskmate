@@ -1,6 +1,6 @@
 // 채팅·보고서 공용 — 본문 속 이미지/HTML 파일 참조 렌더
 import { h, Fragment } from 'preact';
-import { useState } from 'preact/hooks';
+import { useState, useEffect } from 'preact/hooks';
 import { currentBase } from './api.js';
 import { C } from './ui.jsx';
 import { t } from './i18n.js';
@@ -62,9 +62,25 @@ export function HtmlViewerModal({ url, title, onClose }) {
     </div>
   );
 }
+// 존재 검증 캐시 — 없는 파일 이름이 우연히 본문에 있어도 의미 없는 칩을 만들지 않는다
+const existCache = new Map();
+async function checkExists(url) {
+  if (existCache.has(url)) return existCache.get(url);
+  let ok = false;
+  try { ok = (await fetch(url, { method: 'HEAD' })).ok; } catch { ok = false; }
+  existCache.set(url, ok);
+  return ok;
+}
 export function HtmlChips({ text }) {
   const [open, setOpen] = useState(null);
-  const refs = extractHtmlRefs(text);
+  const all = extractHtmlRefs(text);
+  const [refs, setRefs] = useState(() => all.filter(r => existCache.get(r.url) === true));
+  useEffect(() => {
+    let alive = true;
+    Promise.all(all.map(async r => (await checkExists(r.url)) ? r : null))
+      .then(rs => { if (alive) setRefs(rs.filter(Boolean)); });
+    return () => { alive = false; };
+  }, [text]);
   if (!refs.length) return null;
   return (
     <>
