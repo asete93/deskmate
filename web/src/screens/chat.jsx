@@ -329,24 +329,29 @@ function MsgAvatar({ name, onOpenCfg }) {
 // 에이전트 발화 본문 — 길면 요약(첫 문장+목차)만 보이고 원문은 팝업 (attach_detail을 안 쓴 경우의 안전망)
 // 마크다운의 문단 구분(빈 줄)은 말풍선에선 행간만 벌리므로 한 줄로 접는다 (원문 팝업은 그대로)
 const tighten = (t) => String(t || '').replace(/\n[ \t]*\n+/g, '\n');
-// 이전 대화 페이지 버튼 — 프리펜드 후 스크롤 위치 유지
-function LoadOlderBtn({ channel, boxRef }) {
+// 이전 대화 무한 스크롤 — 상단 근접 시 이전 페이지 로딩, 프리펜드 후 보던 위치 유지
+function useOlderOnScroll(ref, channel) {
+  const busyRef = useRef(false);
   const [busy, setBusy] = useState(false);
-  if (!store.chatMore?.[channel]) return null;
-  const go = async () => {
-    if (busy) return;
+  const onScroll = async () => {
+    const el = ref.current;
+    if (!el || busyRef.current || !store.chatMore?.[channel]) return;
+    if (el.scrollTop > 60) return;
+    busyRef.current = true;
     setBusy(true);
-    const el = boxRef.current;
-    const h0 = el ? el.scrollHeight : 0;
+    const h0 = el.scrollHeight;
     try { await loadOlder(channel); } catch (e) { showToast(e.message); }
-    requestAnimationFrame(() => { if (el) el.scrollTop += el.scrollHeight - h0; });
-    setBusy(false);
+    requestAnimationFrame(() => {
+      el.scrollTop += el.scrollHeight - h0;
+      busyRef.current = false;
+      setBusy(false);
+    });
   };
-  return (
-    <div onClick={go} style={{ alignSelf: 'center', cursor: 'pointer', fontSize: '12.5px', fontWeight: 700, color: C.cta, background: '#fff', border: `1px solid ${C.line}`, borderRadius: '50px', padding: '6px 16px', flexShrink: 0 }}>
-      {busy ? '…' : t('이전 대화 보기')}
-    </div>
-  );
+  return { onScroll, busy };
+}
+function OlderSpin({ busy }) {
+  if (!busy) return null;
+  return <div style={{ alignSelf: 'center', fontSize: '12px', fontWeight: 700, color: C.t58, flexShrink: 0 }}>…</div>;
 }
 
 export function AgentText({ text, light = false }) {
@@ -440,12 +445,13 @@ export function MessageList({ channel, height = null, agentName = '팀장', agen
     : store.agents.find(a => a.id === Number(channel.split(':')[1]));
   useEffect(() => { loadChannel(channel); }, [channel]);
   useEffect(() => { if (ref.current) ref.current.scrollTop = ref.current.scrollHeight; }, [msgs[msgs.length - 1]?.id, agent?.status]);
+  const older = useOlderOnScroll(ref, channel);
 
   const answer = answerByMessage;
 
   return (
-    <div ref={ref} style={{ overflowY: 'auto', height: listH, display: 'flex', flexDirection: 'column', gap: '14px', padding: inCard ? '16px 14px' : '4px 2px' }}>
-      <LoadOlderBtn channel={channel} boxRef={ref} />
+    <div ref={ref} onScroll={older.onScroll} style={{ overflowY: 'auto', height: listH, display: 'flex', flexDirection: 'column', gap: '14px', padding: inCard ? '16px 14px' : '4px 2px' }}>
+      <OlderSpin busy={older.busy} />
       {msgs.map(m => {
         if (m.from_actor === 'User') {
           return (
@@ -575,6 +581,7 @@ export function RoomFeed({ channel, inCard = false }) {
   const roomActive = store.agents.filter(a => a.status !== 'idle' && (a.work_channel || 'main') === channel);
   useEffect(() => { loadChannel(channel); }, [channel]);
   useEffect(() => { if (ref.current) ref.current.scrollTop = ref.current.scrollHeight; }, [msgs[msgs.length - 1]?.id, roomActive.length, channel]);
+  const older = useOlderOnScroll(ref, channel);
   const mobile = window.innerWidth < 840;
   const listH = mobile ? 'calc(100dvh - 200px)' : `calc(100vh - ${inCard ? 250 : 244}px)`;
 
@@ -589,8 +596,8 @@ export function RoomFeed({ channel, inCard = false }) {
   }
 
   return (
-    <div ref={ref} style={{ overflowY: 'auto', height: listH, display: 'flex', flexDirection: 'column', gap: '18px', padding: inCard ? '16px 14px' : '4px 2px' }}>
-      <LoadOlderBtn channel={channel} boxRef={ref} />
+    <div ref={ref} onScroll={older.onScroll} style={{ overflowY: 'auto', height: listH, display: 'flex', flexDirection: 'column', gap: '18px', padding: inCard ? '16px 14px' : '4px 2px' }}>
+      <OlderSpin busy={older.busy} />
       {rows.map((r, i) => {
         if (r.divider) return <ReqDivider key={`d${r.divider.id}-${i}`} req={r.divider} onReport={setReportReq} />;
         const m = r.m;
