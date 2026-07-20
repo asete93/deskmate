@@ -24,7 +24,8 @@ export const store = {
   notif_channels: [],
   pendingCount: 0,
   claude_md: '',
-  messages: {},          // channel → [msg]
+  messages: {},
+  chatMore: {},          // channel → 이전 페이지 존재 여부
   allChat: null,         // 통합 팀 채팅 (전 채널 시간순) — 로드 후 배열
   usage: { plan: '', limits: [], today: { tokens_in: 0, tokens_out: 0 } }, // 구독 사용량 (위젯)
   toast: null,
@@ -92,8 +93,21 @@ export async function loadModels() {
   try { store.models = await api.get('/models'); emit(); } catch { /* 폴백: ui.jsx 기본 라벨 */ }
 }
 
+const CHAT_PAGE = 80;
 export async function loadChannel(channel) {
-  store.messages[channel] = await api.get(`/chat/${encodeURIComponent(channel)}`);
+  const rows = await api.get(`/chat/${encodeURIComponent(channel)}?limit=${CHAT_PAGE}`);
+  store.messages[channel] = rows;
+  store.chatMore[channel] = rows.length >= CHAT_PAGE;
+  emit();
+}
+// 이전 대화 페이지 — 현재 첫 메시지 이전 CHAT_PAGE건을 앞에 붙인다
+export async function loadOlder(channel) {
+  const cur = store.messages[channel] || [];
+  const before = cur[0]?.id;
+  if (!before) return;
+  const rows = await api.get(`/chat/${encodeURIComponent(channel)}?limit=${CHAT_PAGE}&before=${before}`);
+  store.messages[channel] = [...rows, ...cur];
+  store.chatMore[channel] = rows.length >= CHAT_PAGE;
   emit();
 }
 

@@ -67,7 +67,8 @@ export function createApi({ db, bus, manager, gitApi, uploadsDir, auth, termHub,
 
   // ---- 채팅 ----
   r.get('/chat-all', guard((req, res) => ok(res, db.listAllMessages(Number(req.query.limit) || 300))));
-  r.get('/chat/:channel', guard((req, res) => ok(res, db.listMessages(req.params.channel))));
+  r.get('/chat/:channel', guard((req, res) => ok(res,
+    db.listMessages(req.params.channel, Math.min(Number(req.query.limit) || 80, 500), Number(req.query.before) || null))));
   r.get('/messages/:id', guard((req, res) => {
     const m = db.getMessage(Number(req.params.id));
     if (!m) throw new Error('메시지 없음');

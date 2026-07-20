@@ -3,7 +3,7 @@ import { store, __setI18n } from './store.js';
 // 다국어 — 키는 한국어 원문. 사전에 없는 문자열은 한국어 그대로(폴백).
 // 서버 설정 lang('ko'|'en')이 UI와 에이전트 지침(응답 언어)을 함께 전환한다.
 const EN = {
-  '확인 완료': 'Reviewed', '보고서를 확인 완료로 표시했습니다.': 'Report marked as reviewed.',
+  '이전 대화 보기': 'Load earlier messages', '확인 완료': 'Reviewed', '보고서를 확인 완료로 표시했습니다.': 'Report marked as reviewed.',
   // 토스트 (클라·서버 공용)
   '.gitignore 저장됨': '.gitignore saved',
   '미리보기 대상이 없습니다.': 'Nothing to preview.',

@@ -1,7 +1,7 @@
 import { h, Fragment } from 'preact';
 import { useEffect, useRef, useState } from 'preact/hooks';
 import { marked } from 'marked';
-import { store, loadChannel, showToast, unreadCount } from '../store.js';
+import { store, loadChannel, loadOlder, showToast, unreadCount } from '../store.js';
 import { api, currentBase } from '../api.js';
 import { C, card, Btn, SegPill, Input, Chip, StatusPill, REQ_STATUS, actorChip, actorLabel, fmtTime, modelLabel, modelOptions, effortOptions, agentStatus, dotStyle, Linkify, Modal, Spin } from '../ui.jsx';
 import { CfgPanel } from './subs.jsx';
@@ -329,6 +329,26 @@ function MsgAvatar({ name, onOpenCfg }) {
 // 에이전트 발화 본문 — 길면 요약(첫 문장+목차)만 보이고 원문은 팝업 (attach_detail을 안 쓴 경우의 안전망)
 // 마크다운의 문단 구분(빈 줄)은 말풍선에선 행간만 벌리므로 한 줄로 접는다 (원문 팝업은 그대로)
 const tighten = (t) => String(t || '').replace(/\n[ \t]*\n+/g, '\n');
+// 이전 대화 페이지 버튼 — 프리펜드 후 스크롤 위치 유지
+function LoadOlderBtn({ channel, boxRef }) {
+  const [busy, setBusy] = useState(false);
+  if (!store.chatMore?.[channel]) return null;
+  const go = async () => {
+    if (busy) return;
+    setBusy(true);
+    const el = boxRef.current;
+    const h0 = el ? el.scrollHeight : 0;
+    try { await loadOlder(channel); } catch (e) { showToast(e.message); }
+    requestAnimationFrame(() => { if (el) el.scrollTop += el.scrollHeight - h0; });
+    setBusy(false);
+  };
+  return (
+    <div onClick={go} style={{ alignSelf: 'center', cursor: 'pointer', fontSize: '12.5px', fontWeight: 700, color: C.cta, background: '#fff', border: `1px solid ${C.line}`, borderRadius: '50px', padding: '6px 16px', flexShrink: 0 }}>
+      {busy ? '…' : t('이전 대화 보기')}
+    </div>
+  );
+}
+
 export function AgentText({ text, light = false }) {
   const [open, setOpen] = useState(false);
   const LIMIT = 400;
@@ -419,12 +439,13 @@ export function MessageList({ channel, height = null, agentName = '팀장', agen
     ? store.agents.find(a => a.kind === 'main')
     : store.agents.find(a => a.id === Number(channel.split(':')[1]));
   useEffect(() => { loadChannel(channel); }, [channel]);
-  useEffect(() => { if (ref.current) ref.current.scrollTop = ref.current.scrollHeight; }, [msgs.length, agent?.status]);
+  useEffect(() => { if (ref.current) ref.current.scrollTop = ref.current.scrollHeight; }, [msgs[msgs.length - 1]?.id, agent?.status]);
 
   const answer = answerByMessage;
 
   return (
     <div ref={ref} style={{ overflowY: 'auto', height: listH, display: 'flex', flexDirection: 'column', gap: '14px', padding: inCard ? '16px 14px' : '4px 2px' }}>
+      <LoadOlderBtn channel={channel} boxRef={ref} />
       {msgs.map(m => {
         if (m.from_actor === 'User') {
           return (
@@ -553,7 +574,7 @@ export function RoomFeed({ channel, inCard = false }) {
   // 이 방에서 발원한 작업만 인디케이터 표시
   const roomActive = store.agents.filter(a => a.status !== 'idle' && (a.work_channel || 'main') === channel);
   useEffect(() => { loadChannel(channel); }, [channel]);
-  useEffect(() => { if (ref.current) ref.current.scrollTop = ref.current.scrollHeight; }, [msgs.length, roomActive.length, channel]);
+  useEffect(() => { if (ref.current) ref.current.scrollTop = ref.current.scrollHeight; }, [msgs[msgs.length - 1]?.id, roomActive.length, channel]);
   const mobile = window.innerWidth < 840;
   const listH = mobile ? 'calc(100dvh - 200px)' : `calc(100vh - ${inCard ? 250 : 244}px)`;
 
@@ -569,6 +590,7 @@ export function RoomFeed({ channel, inCard = false }) {
 
   return (
     <div ref={ref} style={{ overflowY: 'auto', height: listH, display: 'flex', flexDirection: 'column', gap: '18px', padding: inCard ? '16px 14px' : '4px 2px' }}>
+      <LoadOlderBtn channel={channel} boxRef={ref} />
       {rows.map((r, i) => {
         if (r.divider) return <ReqDivider key={`d${r.divider.id}-${i}`} req={r.divider} onReport={setReportReq} />;
         const m = r.m;

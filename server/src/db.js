@@ -176,8 +176,11 @@ function wrap(db) {
       const m = db.prepare('SELECT * FROM messages WHERE id=?').get(id);
       return m ? hydrateMsg(m) : null;
     },
-    listMessages(channel, limit = 500) {
-      return db.prepare('SELECT * FROM messages WHERE channel=? ORDER BY id LIMIT ?').all(channel, limit).map(hydrateMsg);
+    listMessages(channel, limit = 80, beforeId = null) {
+      const rows = beforeId
+        ? db.prepare('SELECT * FROM messages WHERE channel=? AND id<? ORDER BY id DESC LIMIT ?').all(channel, beforeId, limit)
+        : db.prepare('SELECT * FROM messages WHERE channel=? ORDER BY id DESC LIMIT ?').all(channel, limit);
+      return rows.map(hydrateMsg).reverse(); // 최신 창을 시간순으로
     },
     // 전 채널 통합 (팀 채팅) — 최근 limit건 시간순
     // 전 채널 메시지 (안읽음 집계 근원 데이터)
