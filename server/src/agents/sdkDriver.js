@@ -372,15 +372,19 @@ export function createSdkDriver(ctx) {
           } else if (msg.type === 'assistant') {
             const text = (msg.message.content || []).filter(b => b.type === 'text').map(b => b.text).join('\n').trim();
             if (text) {
-              ctx.postMessage({
+              // 턴 도중 텍스트는 진행 로그(progress) — 채팅에선 접혀 보이고, result 도착 시 마지막 것만 최종 응답으로 승격
+              const posted = ctx.postMessage({
                 // 응답은 요청이 들어온 공간(1:1/팀 채팅)으로, 위임 턴은 'req'(팀 채팅 공개 흐름)로
                 channel: entry.replyChannel || channelOf(agent), request_id: entry.currentRequestId ?? entry.usageRequestId ?? null,
                 // 팀원의 현재 턴이 팀장 위임(dispatch)이면 수신자는 팀장 — 대표에게 직접 보고하지 않는다
                 from_actor: agent.kind === 'main' ? 'Main' : agent.name,
                 to_actor: agent.kind === 'main' ? 'User' : (entry.replyTo || 'User'),
-                kind: 'text', content: { text },
+                kind: 'text', content: { text, progress: true },
               });
               entry.lastText = text;
+              entry.lastMsgId = posted.id;
+              // 작업자 표시(WorkingBar/Indicator)에 지금 뭐 하는지 노출
+              ctx.setAgentStatus(agent.id, 'working', text.replace(/\s+/g, ' ').slice(0, 80));
             }
           } else if (msg.type === 'result') {
             // 에러 result는 직후 SDK가 throw — pendingText를 지우지 않고 catch(자동 재시도)에 맡긴다
@@ -392,7 +396,17 @@ export function createSdkDriver(ctx) {
                 (u.input_tokens || 0) + (u.cache_creation_input_tokens || 0) + (u.cache_read_input_tokens || 0),
                 u.output_tokens || 0);
             }
-            ctx.setAgentStatus(agent.id, 'idle');
+            // 마지막 텍스트 = 최종 응답 — progress 해제해 채팅에 정식 표시
+            if (entry.lastMsgId) {
+              const m = ctx.db.getMessage(entry.lastMsgId);
+              if (m?.content?.progress) {
+                const { progress, ...rest } = m.content;
+                ctx.db.setMessageContent(m.id, rest);
+                ctx.bus.message({ ...m, content: rest });
+              }
+              entry.lastMsgId = null;
+            }
+            ctx.setAgentStatus(agent.id, 'idle', '');
             entry.pendingText = null;
             for (const w of entry.waiters.splice(0)) w(entry.lastText || '');
             // REQ는 턴 종료로 자동 완료하지 않는다 — 팀장이 close_request/submit_report로 닫는다

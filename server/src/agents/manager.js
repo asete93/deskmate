@@ -26,7 +26,7 @@ export function createManager({ db, bus, notify, workDir, uploadsDir, driverKind
       const msg = db.getMessage(id);
       bus.message(msg);
       // 대표 수신 응답은 모바일 푸시로도 — 완료 보고가 REQ 없이 채팅으로만 오는 경우 커버
-      if (msg.to_actor === 'User' && !['User', 'System'].includes(msg.from_actor) && ['text', 'report'].includes(msg.kind)) {
+      if (msg.to_actor === 'User' && !['User', 'System'].includes(msg.from_actor) && ['text', 'report'].includes(msg.kind) && !msg.content?.progress) {
         const who = msg.from_actor === 'Main' ? (db.listAgents().find(a => a.kind === 'main')?.name || '팀장') : msg.from_actor;
         const body = (msg.content?.text || msg.content?.title || '').replace(/\s+/g, ' ').slice(0, 90);
         notify.chatReply?.(`${who} — ${body}`);

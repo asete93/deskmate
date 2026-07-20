@@ -329,6 +329,38 @@ function MsgAvatar({ name, onOpenCfg }) {
 // 에이전트 발화 본문 — 길면 요약(첫 문장+목차)만 보이고 원문은 팝업 (attach_detail을 안 쓴 경우의 안전망)
 // 마크다운의 문단 구분(빈 줄)은 말풍선에선 행간만 벌리므로 한 줄로 접는다 (원문 팝업은 그대로)
 const tighten = (t) => String(t || '').replace(/\n[ \t]*\n+/g, '\n');
+// 진행 로그(작업 중 중간 출력) 접기 — 연속된 progress 메시지를 한 줄 아코디언으로
+export function groupProgress(msgs) {
+  const rows = [];
+  for (const m of msgs) {
+    const isProg = m.kind === 'text' && m.content?.progress;
+    const last = rows[rows.length - 1];
+    if (isProg && last?.progress && last.from === m.from_actor) last.items.push(m);
+    else if (isProg) rows.push({ progress: true, from: m.from_actor, items: [m] });
+    else rows.push({ m });
+  }
+  return rows;
+}
+export function ProgressFold({ group }) {
+  const [open, setOpen] = useState(false);
+  return (
+    <div style={{ alignSelf: 'flex-start', maxWidth: '82%' }}>
+      <div onClick={() => setOpen(!open)}
+        style={{ cursor: 'pointer', fontSize: '12px', fontWeight: 600, color: C.t58, background: '#fff', border: `1px solid ${C.line}`, borderRadius: '50px', padding: '4px 12px', display: 'inline-flex', alignItems: 'center', gap: '6px' }}>
+        <span style={{ fontSize: '10px' }}>{open ? '▾' : '▸'}</span>
+        {actorLabel(group.from)} {t('진행 로그')} {group.items.length}
+      </div>
+      {open && (
+        <div style={{ marginTop: '6px', display: 'flex', flexDirection: 'column', gap: '6px', borderLeft: `2px solid ${C.line}`, paddingLeft: '10px' }}>
+          {group.items.map(pm => (
+            <div key={pm.id} style={{ fontSize: '12.5px', lineHeight: 1.55, color: C.t58, whiteSpace: 'pre-wrap' }}>{pm.content.text}</div>
+          ))}
+        </div>
+      )}
+    </div>
+  );
+}
+
 // 이전 대화 무한 스크롤 — 상단 근접 시 이전 페이지 로딩, 프리펜드 후 보던 위치 유지
 function useOlderOnScroll(ref, channel) {
   const busyRef = useRef(false);
@@ -452,7 +484,9 @@ export function MessageList({ channel, height = null, agentName = '팀장', agen
   return (
     <div ref={ref} onScroll={older.onScroll} style={{ overflowY: 'auto', height: listH, display: 'flex', flexDirection: 'column', gap: '14px', padding: inCard ? '16px 14px' : '4px 2px' }}>
       <OlderSpin busy={older.busy} />
-      {msgs.map(m => {
+      {groupProgress(msgs).map((row, gi) => {
+        if (row.progress) return <ProgressFold key={`p${row.items[0].id}`} group={row} />;
+        const m = row.m;
         if (m.from_actor === 'User') {
           return (
             <div key={m.id} style={{ display: 'flex', flexDirection: 'column' }}>
@@ -587,12 +621,13 @@ export function RoomFeed({ channel, inCard = false }) {
 
   let lastReqId = null;
   const rows = [];
-  for (const m of msgs) {
-    if (m.request_id != null && m.request_id !== lastReqId) {
-      lastReqId = m.request_id;
-      rows.push({ divider: reqById[m.request_id] || { id: m.request_id, title: '', status: 'active' } });
+  for (const row of groupProgress(msgs)) {
+    const first = row.progress ? row.items[0] : row.m;
+    if (first.request_id != null && first.request_id !== lastReqId) {
+      lastReqId = first.request_id;
+      rows.push({ divider: reqById[first.request_id] || { id: first.request_id, title: '', status: 'active' } });
     }
-    rows.push({ m });
+    rows.push(row);
   }
 
   return (
@@ -600,6 +635,7 @@ export function RoomFeed({ channel, inCard = false }) {
       <OlderSpin busy={older.busy} />
       {rows.map((r, i) => {
         if (r.divider) return <ReqDivider key={`d${r.divider.id}-${i}`} req={r.divider} onReport={setReportReq} />;
+        if (r.progress) return <ProgressFold key={`p${r.items[0].id}`} group={r} />;
         const m = r.m;
         if (m.kind === 'report') {
           return (

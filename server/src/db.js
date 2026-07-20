@@ -198,6 +198,9 @@ function wrap(db) {
     answerMessage(id, answer) {
       db.prepare('UPDATE messages SET answered=1, answer=? WHERE id=?').run(J(answer), id);
     },
+    setMessageContent(id, content) {
+      db.prepare('UPDATE messages SET content=? WHERE id=?').run(J(content), id);
+    },
     // ---- interactions ----
     insertInteraction(i) {
       const r = db.prepare(`INSERT INTO interactions(message_id,agent_id,type,payload,status,created_ts)
