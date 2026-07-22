@@ -11,11 +11,14 @@ let lastGood = null;      // 마지막 성공 응답 — 일시 오류(429 등) 
 let backoffUntil = 0;     // 오류 시 재시도 금지 시각
 
 function loadToken() {
-  if (process.env.CLAUDE_CODE_OAUTH_TOKEN) return process.env.CLAUDE_CODE_OAUTH_TOKEN;
+  // usage API는 장기 토큰(setup-token)을 거부한다 — CLI가 갱신하는 세션 토큰을 우선 사용.
+  // (모델 호출용 SDK 인증은 별개로 CLAUDE_CODE_OAUTH_TOKEN을 그대로 쓴다)
   try {
     const p = path.join(os.homedir(), '.claude', '.credentials.json');
-    return JSON.parse(fs.readFileSync(p, 'utf8'))?.claudeAiOauth?.accessToken || null;
-  } catch { return null; }
+    const t = JSON.parse(fs.readFileSync(p, 'utf8'))?.claudeAiOauth?.accessToken;
+    if (t) return t;
+  } catch { /* 파일 없으면 env 폴백 */ }
+  return process.env.CLAUDE_CODE_OAUTH_TOKEN || null;
 }
 
 async function oauthGet(pathName, token) {

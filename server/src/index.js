@@ -161,7 +161,15 @@ const onUpgrade = (req, socket, head) => {
 server.on('upgrade', onUpgrade);
 wss.on('connection', (ws) => bus.addClient(ws));
 // 웹 터미널 — 세션 허브에 연결 (세션은 WS와 독립적으로 영속)
-termWss.on('connection', (ws, req) => termHub.attach(ws, req));
+termWss.on('connection', (ws, req) => {
+  // pty 스폰 실패 등 터미널 오류가 서버 전체를 죽이지 않게 격리
+  try { termHub.attach(ws, req); }
+  catch (e) {
+    console.error('[terminal] attach 실패:', e.message);
+    try { ws.send(JSON.stringify({ type: 'error', text: `터미널 시작 실패: ${e.message}` })); } catch { /* noop */ }
+    try { ws.close(); } catch { /* noop */ }
+  }
+});
 
 // HOST 기본 0.0.0.0 (IPv4). 미지정 시 Node가 ::(IPv6)에만 바인딩돼
 // localhost가 127.0.0.1로 풀리는 환경에서 접속 거부되는 문제 방지.
