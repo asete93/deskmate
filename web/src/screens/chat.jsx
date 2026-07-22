@@ -431,6 +431,68 @@ export function Attachments({ atts, align = 'flex-start' }) {
   );
 }
 
+// 작업 중 컴팩트 독 — 채팅을 가리지 않는 한 줄 sticky 필, 클릭하면 상세(각자 현재 작업+중단) 팝오버
+export function WorkingDock({ actives, channel }) {
+  const [open, setOpen] = useState(false);
+  if (!actives.length) return null;
+  const first = actives[0];
+  const waitingOnly = actives.every(a => a.status === 'waiting');
+  const headline = actives.length > 1
+    ? (isEn() ? `${first.name} +${actives.length - 1}` : `${first.name} 외 ${actives.length - 1}명`)
+    : first.name;
+  const tail = waitingOnly
+    ? (isEn() ? 'waiting for your reply' : '응답 대기 중')
+    : `${isEn() ? 'working' : '작업 중'}${actives.length === 1 && first.current_task ? ` · ${first.current_task}` : ''}`;
+  const interrupt = (a) => api.post(`/agents/${a.id}/interrupt`, { channel: a.work_channel || channel || null }).catch(e => showToast(e.message));
+  return (
+    <div style={{ position: 'sticky', bottom: 0, display: 'flex', justifyContent: 'center', paddingTop: '4px', pointerEvents: 'none', zIndex: 5 }}>
+      <div style={{ position: 'relative', pointerEvents: 'auto', maxWidth: '86%' }}>
+        {open && (
+          <div style={{ position: 'absolute', bottom: 'calc(100% + 8px)', left: '50%', transform: 'translateX(-50%)', width: 'min(430px, 88vw)', background: '#fff', borderRadius: '12px', boxShadow: C.popShadow, padding: '6px 14px', zIndex: 60 }}>
+            {actives.map(a => (
+              <div key={a.id} style={{ display: 'flex', alignItems: 'center', gap: '10px', padding: '10px 0', borderBottom: `1px solid ${C.line}` }}>
+                <div style={{ flex: 1, minWidth: 0 }}>
+                  <div style={{ fontSize: '13.5px', fontWeight: 700, color: C.heading }}>
+                    {a.name}
+                    <span style={{ marginLeft: '8px', fontSize: '11.5px', fontWeight: 700, color: a.status === 'waiting' ? C.goldText : C.cta }}>
+                      {a.status === 'waiting' ? (isEn() ? 'waiting' : '응답 대기') : (isEn() ? 'working' : '작업 중')}
+                    </span>
+                  </div>
+                  <div style={{ fontSize: '12.5px', color: C.t58, marginTop: '2px', overflow: 'hidden', textOverflow: 'ellipsis', whiteSpace: 'nowrap' }}>
+                    {a.status === 'waiting'
+                      ? (isEn() ? 'Answer the card in chat' : '채팅의 카드에 답해주세요')
+                      : (a.current_task || (isEn() ? 'Working…' : '작업을 진행하고 있습니다…'))}
+                  </div>
+                </div>
+                {a.status === 'working' && (
+                  <span onClick={() => interrupt(a)}
+                    style={{ cursor: 'pointer', border: '1px solid rgba(200,32,20,0.4)', color: C.danger, borderRadius: '50px', padding: '4px 12px', fontSize: '12px', fontWeight: 600, flexShrink: 0 }}>
+                    {t('중단')}
+                  </span>
+                )}
+              </div>
+            ))}
+          </div>
+        )}
+        <div onClick={() => setOpen(!open)}
+          style={{ display: 'flex', alignItems: 'center', gap: '9px', cursor: 'pointer', background: waitingOnly ? C.goldLight : 'rgba(255,255,255,0.96)', border: `1px solid ${waitingOnly ? C.goldBorder : C.line}`, borderRadius: '50px', boxShadow: C.cardShadow, padding: '6px 15px' }}>
+          {!waitingOnly && (
+            <span style={{ display: 'inline-flex', gap: '4px' }}>
+              {[0, 1, 2].map(i => (
+                <span key={i} style={{ width: '5px', height: '5px', borderRadius: '50%', background: C.cta, animation: 'ga-pulse 1.2s ease infinite', animationDelay: `${i * 0.2}s` }} />
+              ))}
+            </span>
+          )}
+          <span style={{ fontSize: '12.5px', fontWeight: 600, color: waitingOnly ? C.goldText : C.t58, overflow: 'hidden', textOverflow: 'ellipsis', whiteSpace: 'nowrap', maxWidth: '58vw' }}>
+            {headline} {tail}
+          </span>
+          <span style={{ fontSize: '11px', color: C.t58 }}>{open ? '▾' : '▸'}</span>
+        </div>
+      </div>
+    </div>
+  );
+}
+
 // 작업 중 타이핑 도트 인디케이터 + 중단 버튼 (팀 채팅에서도 재사용)
 export function WorkingIndicator({ agent, agentName, channel = null }) {
   if (!agent || agent.status === 'idle') return null;
@@ -529,7 +591,8 @@ export function MessageList({ channel, height = null, agentName = '팀장', agen
           </div>
         );
       })}
-      <WorkingIndicator agent={agent} agentName={agentName} channel={channel} />
+      <WorkingDock channel={channel}
+        actives={agent && agent.status !== 'idle' && !(agent.kind === 'main' && (agent.work_channel || 'main') !== channel) ? [agent] : []} />
     </div>
   );
 }
@@ -705,7 +768,7 @@ export function RoomFeed({ channel, inCard = false }) {
         );
       })}
       {msgs.length === 0 && <div style={{ color: C.t58, fontSize: '13.5px', alignSelf: 'center', marginTop: '40px' }}>{isEn() ? 'No messages yet — send the first request below.' : '아직 대화가 없습니다. 아래 입력창에서 첫 요청을 보내보세요.'}</div>}
-      {roomActive.map(a => <WorkingIndicator key={a.id} agent={a} agentName={a.name} channel={channel} />)}
+      <WorkingDock actives={roomActive} channel={channel} />
       {reportReq && <ReportModal requestId={reportReq.id} report={reportReq.report} onClose={() => setReportReq(null)} />}
       {cfgAgentId != null && (() => {
         const a = store.agents.find(x => x.id === cfgAgentId);
