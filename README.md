@@ -18,6 +18,24 @@
 | **Claude 요금제** | Pro/Max 구독(권장) 또는 Anthropic API 키 |
 | 선택 | `git`(Git 메뉴), `codex` CLI(외부 AI 팀원), `tmux`(터미널 세션 영속) |
 
+### Claude 인증 — macOS / Linux 차이
+
+에이전트 구동엔 Claude Code 인증이 필요합니다. OS에 따라 권장 방식이 다릅니다.
+
+| | Linux | macOS |
+|---|---|---|
+| 자격증명 저장 위치 | `~/.claude/.credentials.json` 파일 | **키체인**(Keychain) 기본 |
+| 일반 실행 (터미널에서 직접) | `claude /login` 후 `--driver sdk`로 충분 | 동일 — 로그인만으로 동작 |
+| 데몬/서비스 운영 (systemd·launchd) | 로그인만으로 동작 | ⚠ 키체인이 로그인 전엔 잠겨 있어 **인증이 끊길 수 있음** — `claude setup-token`으로 장기 토큰 발급 후 `CLAUDE_CODE_OAUTH_TOKEN` 환경변수 주입 권장 |
+| 사용량 위젯 | 항상 동작 (파일 기반) | `.credentials.json` 파일이 있을 때 동작 — 키체인에만 저장된 환경이면 위젯만 비활성 (다른 기능은 정상) |
+
+주의 2가지:
+
+- **`--driver sdk`를 명시하세요.** 미지정 시 자동 감지는 환경변수(`ANTHROPIC_API_KEY`/`CLAUDE_CODE_OAUTH_TOKEN`)만 확인해서, 로그인만 되어 있는 환경에선 mock(미리보기)으로 시작합니다.
+- 장기 토큰(`setup-token`)은 Pro/Max **구독 과금**으로 1년 유효하며, 모델 호출 전용입니다 (Remote Control 불가). API 키(`ANTHROPIC_API_KEY`)는 구독과 별개인 **종량 과금**이니 요금제를 확인하세요.
+
+macOS 헤드리스 운영 시 추가 팁: 자동 로그인 활성화(키체인 해제), FileVault 비활성(무인 부팅), `pmset -a sleep 0 autorestart 1`(절전 금지·정전 복구), 프로젝트가 외장 볼륨이면 기동 스크립트에 마운트 대기 로직을 넣으세요.
+
 > **보안 권고** — 대시보드 접근 = 서버 명령 실행 권한입니다. **인터넷에 직접 노출하지 말고, 내부망 또는 VPN(Tailscale/WireGuard 등) 안에서만 사용하세요.** 외부 접근이 꼭 필요하면 아래 보안 섹션의 로그인 + `--allow` + HTTPS를 반드시 조합하세요.
 
 ## 이 플랫폼의 용도

@@ -16,6 +16,24 @@ CEO (you) → Team Lead (main agent) → Members (worker agents). Send one chat 
 | **Claude plan** | Pro/Max subscription (recommended) or an Anthropic API key |
 | Optional | `git` (Git menu), `codex` CLI (external AI members), `tmux` (persistent terminal sessions) |
 
+### Claude auth — macOS vs Linux
+
+Agents need Claude Code authentication. The recommended setup differs by OS.
+
+| | Linux | macOS |
+|---|---|---|
+| Credential storage | `~/.claude/.credentials.json` file | **Keychain** by default |
+| Running from a terminal | `claude /login` + `--driver sdk` is enough | Same — login is enough |
+| Running as a daemon (systemd·launchd) | Login is enough | ⚠ Keychain is locked before user login, so auth can drop — issue a long-lived token with `claude setup-token` and inject it as `CLAUDE_CODE_OAUTH_TOKEN` |
+| Usage widget | Always works (file-based) | Works when `.credentials.json` exists — keychain-only setups just lose the widget (everything else works) |
+
+Two gotchas:
+
+- **Always pass `--driver sdk` explicitly.** Auto-detection only checks env vars (`ANTHROPIC_API_KEY`/`CLAUDE_CODE_OAUTH_TOKEN`); a login-only environment silently starts in mock (preview) mode.
+- A long-lived token (`setup-token`) bills to your Pro/Max **subscription**, lasts one year, and is model-calls only (no Remote Control). `ANTHROPIC_API_KEY` bills **pay-as-you-go**, separate from the subscription.
+
+Headless macOS tips: enable auto-login (unlocks the keychain), keep FileVault off (unattended boot), `pmset -a sleep 0 autorestart 1`, and if the project lives on an external volume add a mount-wait loop to the launch script.
+
 > **Security notice** — dashboard access equals command execution on your server. **Do not expose it to the open internet; use it inside a private network or a VPN (Tailscale/WireGuard).** If external access is unavoidable, combine login + `--allow` + HTTPS from the security section below.
 
 ## What is this for?
