@@ -81,9 +81,13 @@ export function createSdkDriver(ctx) {
           ctx.postMessage({ channel: room, request_id: reqId, from_actor: 'Main', to_actor: sub.name, kind: 'text', content: { text: task } });
           ctx.setAgentStatus(sub.id, 'working', task.slice(0, 60), room);
           // 업무 흐름 자동 티켓: 위임 = 진행 중 티켓 생성 → 응답 = 검토 → REQ 완료 = 자동 done
-          const tktTitle = task.split('\n').map(l => l.replace(/^#+\s*/, '').replace(/[*_\`]/g, '').trim()).find(Boolean)?.slice(0, 60) || '위임 작업';
+          // 헤딩 줄("## 목표" 등)은 제목이 아니다 — 첫 본문 줄을 제목으로
+          const tktTitle = task.split('\n')
+            .filter(l => l.trim() && !/^#+\s/.test(l.trim()))
+            .map(l => l.replace(/[*_\`]/g, '').trim())
+            .find(Boolean)?.slice(0, 60) || '위임 작업';
           const tktId = ctx.upsertTicket(
-            { title: tktTitle, status: 'in_progress', assignee: sub.name, description: task.slice(0, 500), request_id: reqId },
+            { title: tktTitle, status: 'in_progress', assignee: sub.name, description: task.slice(0, 3000), request_id: reqId },
             { ts: Date.now(), actor: 'System', text: `팀장 → ${sub.name} 위임 (자동 생성)` },
           );
           const reply = await sendAndCollect(sub, task, reqId, room);

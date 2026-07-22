@@ -25,7 +25,7 @@ function TicketModal({ t, onClose }) {
       </div>
       <div style={{ fontSize: '19px', fontWeight: 600, color: C.heading, marginTop: '10px' }}>{t.title}</div>
       <div style={{ fontSize: '13px', color: C.t58, marginTop: '4px' }}>담당 · {t.assignee || '-'}</div>
-      <div style={{ fontSize: '14.5px', lineHeight: 1.6, marginTop: '14px' }}>{t.description}</div>
+      <div style={{ fontSize: '14px', lineHeight: 1.65, marginTop: '14px', whiteSpace: 'pre-wrap', maxHeight: '46vh', overflowY: 'auto', background: C.cream, borderRadius: '10px', padding: '14px 16px' }}>{t.description}</div>
       <div style={{ ...label12, marginTop: '22px', marginBottom: '10px' }}>처리 이력</div>
       <div style={{ display: 'flex', flexDirection: 'column' }}>
         {t.history.map((hh, i) => {
@@ -43,9 +43,12 @@ function TicketModal({ t, onClose }) {
   );
 }
 
+const COL_CAP = 6; // 컬럼당 기본 표시 수 — 넘치면 '더 보기'로 펼침
+
 export function TicketsScreen() {
   const [view, setView] = useState('board');
   const [selId, setSelId] = useState(null);
+  const [expanded, setExpanded] = useState({}); // colKey → true(전체 표시)
   const sel = selId != null ? store.tickets.find(t => t.id === selId) : null;
 
   const tabStyle = (active) => ({
@@ -64,12 +67,13 @@ export function TicketsScreen() {
         <div style={{ overflowX: 'auto', paddingBottom: '8px' }}>
           <div style={{ display: 'flex', gap: '14px', minWidth: '900px', alignItems: 'flex-start' }}>
             {COLS.map(col => {
-              const items = store.tickets.filter(t => t.status === col.key);
+              const all = store.tickets.filter(t => t.status === col.key);
+              const items = expanded[col.key] ? all : all.slice(0, COL_CAP);
               return (
                 <div key={col.key} style={{ flex: 1, minWidth: '210px', background: C.ceramic, borderRadius: '12px', padding: '14px' }}>
                   <div style={{ display: 'flex', alignItems: 'center', gap: '8px', marginBottom: '12px', padding: '0 4px' }}>
                     <span style={{ fontSize: '13px', fontWeight: 700, color: C.heading }}>{col.name}</span>
-                    <span style={{ fontSize: '11.5px', fontWeight: 700, background: '#fff', borderRadius: '50px', padding: '1px 8px', color: C.t58 }}>{items.length}</span>
+                    <span style={{ fontSize: '11.5px', fontWeight: 700, background: '#fff', borderRadius: '50px', padding: '1px 8px', color: C.t58 }}>{all.length}</span>
                   </div>
                   <div style={{ display: 'flex', flexDirection: 'column', gap: '10px' }}>
                     {items.map(tk => {
@@ -85,6 +89,12 @@ export function TicketsScreen() {
                         </div>
                       );
                     })}
+                    {all.length > COL_CAP && (
+                      <div onClick={() => setExpanded(p => ({ ...p, [col.key]: !p[col.key] }))}
+                        style={{ cursor: 'pointer', textAlign: 'center', fontSize: '12.5px', fontWeight: 700, color: C.cta, background: '#fff', borderRadius: '8px', padding: '9px' }}>
+                        {expanded[col.key] ? t('접기') : `${t('더 보기')} +${all.length - COL_CAP}`}
+                      </div>
+                    )}
                   </div>
                 </div>
               );
