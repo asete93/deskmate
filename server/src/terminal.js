@@ -27,8 +27,9 @@ function tmuxList() {
 
 // PTY 추상화 — { write, resize, onData, onExit, kill }
 function openPty({ cwd, cols, rows, tmuxName }) {
-  const shell = process.env.SHELL || '/bin/bash';
-  const env = { ...process.env, TERM: 'xterm-256color' };
+  const shell = process.env.SHELL || (process.platform === 'darwin' ? '/bin/zsh' : '/bin/bash');
+  // 데몬 환경엔 로케일이 없어 zsh 라인 에디터가 한글 입력을 <00xx> 바이트로 표시한다 — UTF-8 강제
+  const env = { ...process.env, TERM: 'xterm-256color', LANG: process.env.LANG || 'ko_KR.UTF-8', LC_ALL: process.env.LC_ALL || 'ko_KR.UTF-8' };
   if (tmuxName && hasTmux) {
     // 세션이 없으면 detached로 먼저 만들고(옵션 적용) attach — race·상태바 노출 없이 깔끔.
     let exists = false;
