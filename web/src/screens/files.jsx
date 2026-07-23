@@ -129,7 +129,12 @@ export function FilesScreen() {
   useEffect(() => { loadRoot(); }, [reloadKey]);
   useEffect(() => { const close = () => setCtx(null); window.addEventListener('click', close); return () => window.removeEventListener('click', close); }, []);
 
-  const openFile = async (node) => {
+  // HTML은 클릭 시 새 창 렌더 (정적 서빙이라 상대경로 CSS/JS 정상). 편집은 우클릭 → '코드로 열기'
+  const openHtmlWindow = (node) => {
+    window.open(`${currentBase()}/workspace/${node.path.split('/').map(encodeURIComponent).join('/')}`, '_blank', 'noopener');
+  };
+  const openFile = async (node, { forceEditor = false } = {}) => {
+    if (!forceEditor && /\.html?$/i.test(node.path)) { openHtmlWindow(node); return; }
     if (dirty && !confirm(isEn() ? 'Discard unsaved changes?' : '저장하지 않은 변경을 버릴까요?')) return;
     try {
       const r = await api.get(`/file?path=${encodeURIComponent(node.path)}`);
@@ -344,6 +349,9 @@ export function FilesScreen() {
 
       {ctx && (
         <div style={{ position: 'fixed', top: ctx.root ? '110px' : `${Math.min(ctx.y, window.innerHeight - 220)}px`, left: ctx.root ? '280px' : `${ctx.x}px`, zIndex: 100, background: '#fff', borderRadius: '10px', boxShadow: C.popShadow, padding: '5px', minWidth: '160px' }} onClick={e => e.stopPropagation()}>
+          {ctx.node && !ctx.node.dir && /\.html?$/i.test(ctx.node.path) && (
+            <MenuItem label={isEn() ? 'Open code (edit)' : '코드로 열기 (편집)'} onClick={() => { setCtx(null); openFile(ctx.node, { forceEditor: true }); }} />
+          )}
           <MenuItem label={isEn() ? 'New file' : '새 파일'} onClick={() => act('newFile')} />
           <MenuItem label={isEn() ? 'New folder' : '새 폴더'} onClick={() => act('newDir')} />
           <MenuItem label={isEn() ? 'Upload files…' : '파일 업로드…'} onClick={() => act('upload')} />
