@@ -586,7 +586,7 @@ export function MessageList({ channel, height = null, agentName = '팀장', agen
               <div style={{ fontSize: '12px', fontWeight: 600, color: agentColor, marginBottom: '4px' }}>{head}</div>
               {Card
                 ? <Card m={m} answer={answer(m)} />
-                : <div style={{ background: '#fff', borderRadius: '4px 16px 16px 16px', boxShadow: C.cardShadow, padding: '12px 16px', fontSize: '14.5px', lineHeight: 1.55, whiteSpace: 'pre-wrap', overflowWrap: 'break-word' }}><AgentText text={m.content.text} /><InlineImages text={m.content.text} /><HtmlChips text={m.content.text} /></div>}
+                : <div style={{ background: '#fff', borderRadius: '4px 16px 16px 16px', boxShadow: C.cardShadow, padding: '12px 16px', fontSize: '14.5px', lineHeight: 1.55, whiteSpace: 'pre-wrap', overflowWrap: 'break-word' }}><AgentText text={m.content.text} />{m.to_actor === 'User' && <><InlineImages text={m.content.text} /><HtmlChips text={m.content.text} /></>}</div>}
             </div>
           </div>
         );
@@ -757,8 +757,8 @@ export function RoomFeed({ channel, inCard = false }) {
                     <div style={{ background: '#fff', borderRadius: '4px 16px 16px 16px', boxShadow: C.cardShadow, padding: '10px 15px', fontSize: '14px', lineHeight: 1.6, whiteSpace: 'pre-wrap', overflowWrap: 'break-word' }}>
                       <span style={{ fontWeight: 700, color: C.cta }}>{recvName}</span>{' '}
                       <AgentText text={m.content.text} />
-                      <InlineImages text={m.content.text} />
-                      <HtmlChips text={m.content.text} />
+                      {m.to_actor === 'User' && <InlineImages text={m.content.text} />}
+                      {m.to_actor === 'User' && <HtmlChips text={m.content.text} />}
                       <Attachments atts={m.content.attachments} />
                     </div>
                   )}

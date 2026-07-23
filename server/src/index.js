@@ -123,15 +123,20 @@ app.use('/workspace', (req, res) => {
   if (!/\.(png|jpe?g|gif|webp|svg|html?)$/i.test(base)) return res.status(404).end();
   const skip = new Set(['node_modules', '.git', 'dist', 'build', '.next']);
   const queue = [WORK_DIR];
-  let found = null;
-  for (let depth = 0; queue.length && depth < 400 && !found; depth++) {
+  const matches = [];
+  for (let depth = 0; queue.length && depth < 400; depth++) {
     const dir = queue.shift();
     let ents = [];
     try { ents = fs.readdirSync(dir, { withFileTypes: true }); } catch { continue; }
     for (const e of ents) {
-      if (e.isFile() && e.name === base) { found = path.join(dir, e.name); break; }
+      if (e.isFile() && e.name === base) matches.push(path.join(dir, e.name));
       if (e.isDirectory() && !skip.has(e.name) && !e.name.startsWith('.')) queue.push(path.join(dir, e.name));
     }
+  }
+  // 동명 파일이 여럿이면 가장 최근 수정본 — 옛 산출물로 오연결되는 문제 방지
+  let found = null, latest = -1;
+  for (const f of matches) {
+    try { const mt = fs.statSync(f).mtimeMs; if (mt > latest) { latest = mt; found = f; } } catch { /* noop */ }
   }
   if (!found) return res.status(404).end();
   res.redirect(302, '/workspace/' + path.relative(WORK_DIR, found).split(path.sep).join('/'));
