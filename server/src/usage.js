@@ -1,6 +1,7 @@
 import fs from 'node:fs';
 import path from 'node:path';
 import os from 'node:os';
+import { execSync } from 'node:child_process';
 
 // Claude 구독 사용량 조회 — CLI가 쓰는 OAuth usage API 활용.
 // 공식 사용량 화면과 동일한 항목(현재 세션 / 주간 전체 / 모델별)을 제공한다.
@@ -11,11 +12,19 @@ let lastGood = null;      // 마지막 성공 응답 — 일시 오류(429 등) 
 let backoffUntil = 0;     // 오류 시 재시도 금지 시각
 
 function loadToken() {
-  // usage API는 장기 토큰(setup-token)을 거부한다 — CLI가 갱신하는 세션 토큰을 우선 사용.
-  // (모델 호출용 SDK 인증은 별개로 CLAUDE_CODE_OAUTH_TOKEN을 그대로 쓴다)
+  // usage API는 장기 토큰(setup-token)을 스코프 부족(user:profile)으로 거부한다 —
+  // CLI가 갱신하는 세션 토큰이 필요. macOS는 키체인이 실저장소(파일은 stale 잔재일 수 있음).
+  const fresh = (o) => o?.accessToken && (!o.expiresAt || o.expiresAt > Date.now()) ? o.accessToken : null;
+  if (process.platform === 'darwin') {
+    try {
+      const raw = execSync('security find-generic-password -s "Claude Code-credentials" -w', { encoding: 'utf8', timeout: 3000, stdio: ['ignore', 'pipe', 'ignore'] });
+      const t = fresh(JSON.parse(raw)?.claudeAiOauth);
+      if (t) return t;
+    } catch { /* 키체인 없음/잠김 — 파일 폴백 */ }
+  }
   try {
     const p = path.join(os.homedir(), '.claude', '.credentials.json');
-    const t = JSON.parse(fs.readFileSync(p, 'utf8'))?.claudeAiOauth?.accessToken;
+    const t = fresh(JSON.parse(fs.readFileSync(p, 'utf8'))?.claudeAiOauth);
     if (t) return t;
   } catch { /* 파일 없으면 env 폴백 */ }
   return process.env.CLAUDE_CODE_OAUTH_TOKEN || null;
