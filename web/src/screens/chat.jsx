@@ -1144,7 +1144,7 @@ export function ChatInput({ channel, target = null, placeholder, inCard = false,
         </div>
       )}
       {mention && candidates.length > 0 && (
-        <div style={{ position: 'absolute', bottom: 'calc(100% + 6px)', left: '8px', minWidth: '260px', background: '#fff', borderRadius: '12px', boxShadow: C.popShadow, padding: '6px', zIndex: 70 }}>
+        <div style={{ position: 'absolute', bottom: 'calc(100% + 6px)', left: '8px', minWidth: '240px', maxWidth: '340px', background: '#fff', borderRadius: '12px', boxShadow: C.popShadow, padding: '6px', zIndex: 70 }}>
           <div style={{ fontSize: '10.5px', fontWeight: 700, letterSpacing: '0.08em', color: C.t58, padding: '4px 10px' }}>{t('호출 가능한 직원')}</div>
           {candidates.map(a => (
             <div key={a.id} onClick={() => pickMention(a.name)}
@@ -1153,7 +1153,9 @@ export function ChatInput({ channel, target = null, placeholder, inCard = false,
               onMouseLeave={e => e.currentTarget.style.background = 'transparent'}>
               <span style={{ width: '7px', height: '7px', borderRadius: '50%', background: a.kind === 'main' ? C.dark : C.cta, flexShrink: 0 }} />
               <span style={{ fontSize: '13.5px', fontWeight: 600, color: C.heading, whiteSpace: 'nowrap', flexShrink: 0 }}>{a.name}</span>
-              <span style={{ fontSize: '11.5px', color: C.t58, marginLeft: 'auto', whiteSpace: 'nowrap', overflow: 'hidden', textOverflow: 'ellipsis', minWidth: 0, textAlign: 'right' }}>{a.kind === 'main' ? '팀장' : a.role || '팀원'}</span>
+              <span style={{ fontSize: '11.5px', color: C.t58, flex: 1, minWidth: 0, whiteSpace: 'nowrap', overflow: 'hidden', textOverflow: 'ellipsis' }}>
+                {a.kind === 'main' ? t('팀장') : (a.role || t('팀원')).split(/[—(]/)[0].trim().slice(0, 28)}
+              </span>
             </div>
           ))}
         </div>
