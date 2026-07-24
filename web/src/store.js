@@ -27,7 +27,6 @@ export const store = {
   messages: {},
   chatMore: {},          // channel → 이전 페이지 존재 여부
   allChat: null,         // 통합 팀 채팅 (전 채널 시간순) — 로드 후 배열
-  usage: { plan: '', limits: [], today: { tokens_in: 0, tokens_out: 0 } }, // 구독 사용량 (위젯)
   toast: null,
 };
 
@@ -148,9 +147,6 @@ export function markRead(...keys) {
   if (changed) { localStorage.setItem('cc_last_read', JSON.stringify(lastRead)); emit(); }
 }
 
-export async function loadUsage() {
-  try { store.usage = await api.get('/usage'); emit(); } catch { /* 서버 미지원/오프라인 */ }
-}
 
 export function connectWs() {
   if (ws) { try { ws.close(); } catch { /* noop */ } }
@@ -207,7 +203,6 @@ export function connectWs() {
     } else if (type === 'claude_md') {
       store.claude_md = payload.content;
     } else if (type === 'rate_limit') {
-      loadUsage(); // 세션의 사용량 변동 신호 → 공식 usage API 재조회
     } else if (type === 'toast') {
       showToast(payload.text);
       return;

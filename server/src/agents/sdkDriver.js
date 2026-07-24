@@ -370,9 +370,6 @@ export function createSdkDriver(ctx) {
             entry.sessionId = msg.session_id;
             if (agent.kind === 'main') db.updateThread(entry.channel, { session_id: msg.session_id });
             else db.updateAgent(agent.id, { session_id: msg.session_id });
-          } else if (msg.type === 'rate_limit_event') {
-            // 구독 사용량 변화 — 사용량 위젯으로 실시간 전달
-            ctx.updateRateLimit(msg.rate_limit_info);
           } else if (msg.type === 'assistant') {
             const text = (msg.message.content || []).filter(b => b.type === 'text').map(b => b.text).join('\n').trim();
             if (text) {

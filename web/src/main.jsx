@@ -1,6 +1,6 @@
 import { h, render, Fragment } from 'preact';
 import { useEffect, useState, useReducer } from 'preact/hooks';
-import { store, subscribe, loadSnapshot, loadModels, loadUsage, loadAllChat, connectWs, showToast, unreadCount, markRead, emit as emitStore } from './store.js';
+import { store, subscribe, loadSnapshot, loadModels, loadAllChat, connectWs, showToast, unreadCount, markRead, emit as emitStore } from './store.js';
 import { t, isEn } from './i18n.js';
 import { api, ensureSelfRegistered, getServices, saveServices, currentBase, setCurrentBase, setAuthToken } from './api.js';
 import { C, Btn, Modal, Input, dotStyle, modelLabel, card, fmtDateTime, SegPill, providerModelOptions, providerEffortOptions } from './ui.jsx';
@@ -223,106 +223,10 @@ function MobileTabs({ screen, badges }) {
           </div>
         );
       })}
-      {/* 사용량 — 플로팅 아이콘 대신 탭으로 */}
-      <div onClick={() => window.dispatchEvent(new CustomEvent('cc-usage-toggle'))} style={{ flex: '1 0 58px', minWidth: '58px', display: 'flex', flexDirection: 'column', alignItems: 'center', gap: '3px', padding: '6px 0', cursor: 'pointer', fontSize: '10.5px', fontWeight: 600, color: C.t58 }}>
-        <svg width="20" height="20" viewBox="0 0 24 24" fill="none" stroke="currentColor" stroke-width="2" stroke-linecap="round" stroke-linejoin="round"><path d="M12 20V10" /><path d="M18 20V4" /><path d="M6 20v-4" /></svg>
-        <span style={{ whiteSpace: 'nowrap' }}>{t('사용량')}</span>
-      </div>
     </nav>
   );
 }
 
-// 사용량 위젯 — 우측하단 플로팅. 활성화 시 화면 이동과 무관하게 지속 표시, 닫기(✕)로만 아이콘 복귀.
-function fmtReset(iso) {
-  if (!iso) return '';
-  const ms = new Date(iso).getTime() - Date.now();
-  const en = isEn();
-  if (ms <= 0) return en ? 'resets soon' : '곧 리셋';
-  const totalMin = Math.round(ms / 60000);
-  const d = Math.floor(totalMin / 1440), hh = Math.floor((totalMin % 1440) / 60), mm = totalMin % 60;
-  return en
-    ? `resets in ${d ? `${d}d ` : ''}${hh ? `${hh}h ` : ''}${mm}m`
-    : `${d ? `${d}일 ` : ''}${hh ? `${hh}시간 ` : ''}${mm}분 후 리셋`;
-}
-const fmtTok2 = (n) => (n >= 1e6 ? `${(n / 1e6).toFixed(1)}M` : n >= 1000 ? `${(n / 1000).toFixed(1)}k` : String(n || 0));
-
-function UsageWidget() {
-  const [on, setOn] = useState(localStorage.getItem('cc_usage_widget') === '1');
-  const [, tick] = useReducer(x => x + 1, 0);
-  useEffect(() => {
-    if (!on) return; // 위젯이 열려 있을 때만 폴링 — 불필요한 호출 제거
-    loadUsage();
-    const t = setInterval(() => { loadUsage(); tick(); }, 60_000);
-    return () => clearInterval(t);
-  }, [on]);
-  const setOpen = (v) => { setOn(v); localStorage.setItem('cc_usage_widget', v ? '1' : '0'); if (v) loadUsage(); };
-  // 모바일 하단 탭의 "사용량" 버튼 → 토글
-  useEffect(() => {
-    const onToggle = () => setOpen(!(localStorage.getItem('cc_usage_widget') === '1'));
-    window.addEventListener('cc-usage-toggle', onToggle);
-    return () => window.removeEventListener('cc-usage-toggle', onToggle);
-  }, []);
-  const limits = Array.isArray(store.usage.limits) ? store.usage.limits : [];
-  const today = store.usage.today || {};
-  const plan = store.usage.plan;
-  const barColor = (p, sev) => (sev !== 'normal' || p >= 90) ? '#e0705f' : p >= 70 ? C.gold : C.mint;
-  // 모바일: 하단 탭바를 덮지 않게 그 위로 띄운다
-  const fixedBottom = window.innerWidth < 840 ? 'calc(72px + env(safe-area-inset-bottom))' : '18px';
-
-  if (!on) {
-    if (window.innerWidth < 840) return null; // 모바일: 플로팅 아이콘 없음 — 하단 탭에서 열기
-    // 비활성: 아이콘만
-    return (
-      <div onClick={() => setOpen(true)} title={t('Claude 사용량 모니터')}
-        style={{ position: 'fixed', right: '18px', bottom: fixedBottom, zIndex: 119, width: '44px', height: '44px', borderRadius: '50%', cursor: 'pointer', display: 'flex', alignItems: 'center', justifyContent: 'center', background: C.dark, color: '#fff', boxShadow: '0 3px 8px rgba(0,0,0,0.3)' }}>
-        <svg width="20" height="20" viewBox="0 0 24 24" fill="none" stroke="currentColor" stroke-width="2" stroke-linecap="round" stroke-linejoin="round">
-          <path d="M12 20V10" /><path d="M18 20V4" /><path d="M6 20v-4" />
-        </svg>
-      </div>
-    );
-  }
-
-  // 활성: 위젯만 (아이콘 숨김) — 닫기 ✕로 복귀
-  return (
-    <div style={{ position: 'fixed', right: '18px', bottom: fixedBottom, zIndex: 119, width: '284px', maxWidth: 'calc(100vw - 36px)', background: C.dark, color: '#fff', borderRadius: '14px', boxShadow: '0 4px 10px rgba(0,0,0,0.28), 0 12px 32px rgba(0,0,0,0.22)', padding: '16px 18px' }}>
-      <div style={{ display: 'flex', alignItems: 'center', gap: '8px' }}>
-        <span style={dotStyle(C.mint, 7, true)} />
-        <span style={{ fontSize: '12px', fontWeight: 700, letterSpacing: '0.08em', color: 'rgba(255,255,255,0.8)' }}>{isEn() ? 'CLAUDE USAGE' : 'CLAUDE 사용량'}</span>
-        {plan && <span style={{ fontSize: '10.5px', fontWeight: 700, background: C.gold, color: C.dark, borderRadius: '50px', padding: '1px 9px' }}>{plan}</span>}
-        {store.usage.stale && <span title={t('일시적 조회 제한 — 마지막 값 표시 중')} style={{ fontSize: '10px', color: 'rgba(255,255,255,0.5)' }}>지연</span>}
-        <span onClick={() => setOpen(false)} title={t('닫기')}
-          style={{ marginLeft: 'auto', cursor: 'pointer', color: 'rgba(255,255,255,0.6)', fontSize: '14px', lineHeight: 1, padding: '2px 4px' }}>✕</span>
-      </div>
-      {limits.length === 0 ? (
-        <div style={{ fontSize: '12px', color: 'rgba(255,255,255,0.6)', marginTop: '10px', lineHeight: 1.5 }}>
-          {store.usage.error
-            ? (isEn() ? 'Usage API temporarily rate-limited — retrying automatically.' : '사용량 API가 일시적으로 제한되었습니다 — 자동으로 재시도합니다.')
-            : (isEn() ? 'Loading usage…' : '사용량 정보를 불러오는 중입니다…')}
-        </div>
-      ) : limits.map((li) => (
-        <div key={li.kind + li.label} style={{ marginTop: '12px' }}>
-          <div style={{ display: 'flex', justifyContent: 'space-between', alignItems: 'baseline' }}>
-            <span style={{ fontSize: '12px', fontWeight: 600 }}>{!isEn() ? li.label : li.label === '현재 세션' ? 'Current session' : li.label.startsWith('주간 · ') ? `Weekly · ${li.label.slice(5) === '모든 모델' ? 'all models' : li.label.slice(5)}` : li.label}</span>
-            <span style={{ fontSize: '13px', fontWeight: 700, color: (li.percent || 0) >= 90 ? '#f0a89e' : '#fff' }}>
-              {li.percent != null ? `${li.percent}% ${isEn() ? 'used' : '사용'}` : '—'}
-            </span>
-          </div>
-          <div style={{ height: '6px', borderRadius: '50px', background: 'rgba(255,255,255,0.18)', overflow: 'hidden', marginTop: '5px' }}>
-            <div style={{ height: '100%', width: `${Math.min(100, li.percent || 0)}%`, borderRadius: '50px', background: barColor(li.percent || 0, li.severity), transition: 'width 0.4s ease' }} />
-          </div>
-          <div style={{ display: 'flex', justifyContent: 'space-between', fontSize: '10.5px', color: 'rgba(255,255,255,0.55)', marginTop: '4px' }}>
-            <span>{li.percent != null ? `${isEn() ? 'left' : '남은'} ${Math.max(0, 100 - li.percent)}%` : ''}</span>
-            <span>{fmtReset(li.resets_at)}</span>
-          </div>
-        </div>
-      ))}
-      <div style={{ borderTop: '1px solid rgba(255,255,255,0.14)', marginTop: '12px', paddingTop: '10px', display: 'flex', justifyContent: 'space-between', fontSize: '11px', color: 'rgba(255,255,255,0.65)' }}>
-        <span>{isEn() ? 'Today' : '오늘 토큰'}</span>
-        <span style={{ fontWeight: 600, color: '#fff' }}>in {fmtTok2(today.tokens_in)} · out {fmtTok2(today.tokens_out)}</span>
-      </div>
-    </div>
-  );
-}
 
 // 목표 수정 모달 (대시보드·채팅 공용)
 export function GoalModal({ onClose }) {
@@ -588,7 +492,6 @@ function App() {
         </main>
         {isMobile && <MobileTabs screen={r.screen} badges={badges} />}
       </div>
-      <UsageWidget />
       {goalOpen && <GoalModal onClose={() => setGoalOpen(false)} />}
       {aiOpen && <ExternalAiModal onClose={() => setAiOpen(false)} />}
       {store.toast && (

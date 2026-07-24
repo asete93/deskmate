@@ -117,14 +117,6 @@ export function createManager({ db, bus, notify, workDir, uploadsDir, driverKind
       });
     },
 
-    // 구독 사용량(rate limit) 갱신 — 세션 스트림의 rate_limit_event에서 수신
-    rateLimits: {},
-    updateRateLimit(info) {
-      if (!info) return;
-      const key = info.rateLimitType || 'five_hour';
-      ctx.rateLimits[key] = { ...info, updated_ts: Date.now() };
-      bus.broadcast('rate_limit', ctx.rateLimits);
-    },
 
     // 시스템 공지 (입사·퇴사 등) — 기본 방에 게시
     announce(text) {

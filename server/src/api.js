@@ -4,7 +4,6 @@ import path from 'node:path';
 import fs from 'node:fs';
 import { buildPptx, buildXlsx } from './reportGen.js';
 import { platformPromptForDisplay } from './agents/platformPrompt.js';
-import { fetchUsage } from './usage.js';
 import { computeNextRun } from './scheduler.js';
 
 export function createApi({ db, bus, manager, gitApi, uploadsDir, auth, termHub, filesApi }) {
@@ -53,13 +52,6 @@ export function createApi({ db, bus, manager, gitApi, uploadsDir, auth, termHub,
   // ---- 스냅샷 / 서비스 ----
   r.get('/state', (req, res) => ok(res, manager.state()));
   r.get('/models', guard(async (req, res) => ok(res, await manager.listModels())));
-  // 구독 사용량 총괄 — 공식 usage API(세션/주간/모델별 %) + 플랜 + 오늘 토큰 합계
-  r.get('/usage', guard(async (req, res) => {
-    const today = new Date(); today.setHours(0, 0, 0, 0);
-    let u = { plan: '', limits: [] };
-    try { u = await fetchUsage(); } catch (e) { u = { plan: '', limits: [], error: e.message }; }
-    ok(res, { ...u, today: db.sumTokensSince(today.getTime()) });
-  }));
   r.get('/service-info', (req, res) => ok(res, {
     name: process.env.SERVICE_NAME || 'Deskmate',
     port: Number(process.env.PORT || 3200),
