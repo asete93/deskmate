@@ -1,4 +1,5 @@
 import { spawn, execSync } from 'node:child_process';
+import os from 'node:os';
 
 // 웹 터미널 허브 — 서버 셸 세션 관리 (WS /term).
 // 백엔드 우선순위:
@@ -28,8 +29,17 @@ function tmuxList() {
 // PTY 추상화 — { write, resize, onData, onExit, kill }
 function openPty({ cwd, cols, rows, tmuxName }) {
   const shell = process.env.SHELL || (process.platform === 'darwin' ? '/bin/zsh' : '/bin/bash');
-  // 데몬 환경엔 로케일이 없어 zsh 라인 에디터가 한글 입력을 <00xx> 바이트로 표시한다 — UTF-8 강제
-  const env = { ...process.env, TERM: 'xterm-256color', LANG: process.env.LANG || 'ko_KR.UTF-8', LC_ALL: process.env.LC_ALL || 'ko_KR.UTF-8' };
+  // 데몬 환경엔 로케일이 없어 zsh 라인 에디터가 한글 입력을 <00xx> 바이트로 표시한다 — UTF-8 강제.
+  // PATH도 데몬 최소값이라 사용자 도구(claude, nvm node 등)가 안 잡힌다 — 표준 사용자 경로 보강
+  const home = process.env.HOME || os.homedir();
+  const extraPath = [`${home}/.local/bin`, '/opt/homebrew/bin', '/usr/local/bin'].filter(p => !String(process.env.PATH || '').includes(p));
+  const env = {
+    ...process.env,
+    TERM: 'xterm-256color',
+    LANG: process.env.LANG || 'ko_KR.UTF-8',
+    LC_ALL: process.env.LC_ALL || 'ko_KR.UTF-8',
+    PATH: [...extraPath, process.env.PATH || '/usr/bin:/bin'].join(':'),
+  };
   if (tmuxName && hasTmux) {
     // 세션이 없으면 detached로 먼저 만들고(옵션 적용) attach — race·상태바 노출 없이 깔끔.
     let exists = false;
@@ -56,7 +66,7 @@ function openPty({ cwd, cols, rows, tmuxName }) {
     };
   }
   if (nodePty) {
-    const p = nodePty.spawn(shell, [], { name: 'xterm-256color', cols, rows, cwd, env });
+    const p = nodePty.spawn(shell, ['-l'], { name: 'xterm-256color', cols, rows, cwd, env });
     return { kind: 'node-pty', write: (d) => p.write(typeof d === 'string' ? d : d.toString()), resize: (c, r) => { try { p.resize(c, r); } catch { /* noop */ } }, onData: (cb) => p.onData(cb), onExit: (cb) => p.onExit(() => cb()), detach: () => {}, kill: () => { try { p.kill(); } catch { /* noop */ } } };
   }
   const sh = spawn('script', ['-qfc', shell, '/dev/null'], { cwd, env });
