@@ -22,11 +22,13 @@ function loadToken() {
       if (t) return t;
     } catch { /* 키체인 없음/잠김 — 파일 폴백 */ }
   }
-  try {
-    const p = path.join(os.homedir(), '.claude', '.credentials.json');
-    const t = fresh(JSON.parse(fs.readFileSync(p, 'utf8'))?.claudeAiOauth);
-    if (t) return t;
-  } catch { /* 파일 없으면 env 폴백 */ }
+  // 사용량 전용 스냅샷(refreshToken 제외 — 인증 회전 간섭 방지). 로그인 세션이 20분마다 갱신.
+  for (const fn of ['usage-token.json', '.credentials.json']) {
+    try {
+      const t = fresh(JSON.parse(fs.readFileSync(path.join(os.homedir(), '.claude', fn), 'utf8'))?.claudeAiOauth);
+      if (t) return t;
+    } catch { /* 다음 후보 */ }
+  }
   return process.env.CLAUDE_CODE_OAUTH_TOKEN || null;
 }
 
